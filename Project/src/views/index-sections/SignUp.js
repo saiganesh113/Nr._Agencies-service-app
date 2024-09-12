@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import { Button } from "reactstrap";
-import * as Components from './Components'; // Assuming you have styled-components in Components.js
+import * as Components from './Components'; 
+// Assuming you have styled-components in Components.js
+
 
 function SignUp() {
   const [formData, setFormData] = useState({
@@ -18,9 +20,20 @@ function SignUp() {
   const [errors, setErrors] = useState({});
   const [isSignIn, setIsSignIn] = useState(true);
   const navigate = useNavigate();
+  
+  const API_BASE_URL = 'http://localhost:5000' ;
 
   const validateForm = () => {
     const newErrors = {};
+
+    const techidRegex = /^[A-Za-z]{4}[!@#$%^&*][0-9]{4}$/;
+
+    if (!formData.techid.trim()) {
+      newErrors.techid = "Tech ID is required.";
+    } else if (!techidRegex.test(formData.techid)) {
+      newErrors.techid = "Tech ID must be 4 letters, 1 special character, and 4 numbers.";
+    }
+
     if (!formData.techid.trim()) newErrors.techid = "Tech ID is required.";
     if (!formData.Name.trim()) newErrors.Name = "Name is required.";
     if (!formData.email) newErrors.email = "Email is required.";
@@ -49,7 +62,7 @@ function SignUp() {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/register-technician", formData);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register-technician`, formData);
       console.log(response.data);
       navigate("/login-page");
     } catch (error) {
@@ -78,6 +91,15 @@ function SignUp() {
 
   const validateLoginForm = () => {
     const newErrors = {};
+
+    const useridRegex = /^[A-Za-z]{4}[!@#$%^&*][0-9]{4}$/;
+
+    if (!loginFormData.userid.trim()) {
+      newErrors.userid = "User ID is required.";
+    } else if (!useridRegex.test(loginFormData.userid)) {
+      newErrors.userid = "User ID must be 4 letters, 1 special character, and 4 numbers.";
+    }
+    
     if (!loginFormData.userid.trim()) newErrors.userid = "User ID is required.";
     if (!loginFormData.firstName.trim()) newErrors.firstName = "First name is required.";
     if (!loginFormData.lastName.trim()) newErrors.lastName = "Last name is required.";
@@ -101,7 +123,7 @@ function SignUp() {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/register-user", loginFormData);
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register-user`, loginFormData);
       console.log(response.data);
       navigate("/login-page"); // Redirect based on user role or dashboard
     } catch (error) {
