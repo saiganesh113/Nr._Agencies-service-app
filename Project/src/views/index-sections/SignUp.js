@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from 'axios';
-import { Button } from "reactstrap";
 import * as Components from './Components'; 
 // Assuming you have styled-components in Components.js
 
@@ -21,18 +20,10 @@ function SignUp() {
   const [isSignIn, setIsSignIn] = useState(true);
   const navigate = useNavigate();
   
-  const API_BASE_URL = 'http://localhost:5000' ;
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://localhost:5000`;
 
   const validateForm = () => {
     const newErrors = {};
-
-    const techidRegex = /^[A-Za-z]{4}[!@#$%^&*][0-9]{4}$/;
-
-    if (!formData.techid.trim()) {
-      newErrors.techid = "Tech ID is required.";
-    } else if (!techidRegex.test(formData.techid)) {
-      newErrors.techid = "Tech ID must be 4 letters, 1 special character, and 4 numbers.";
-    }
 
     if (!formData.techid.trim()) newErrors.techid = "Tech ID is required.";
     if (!formData.Name.trim()) newErrors.Name = "Name is required.";
@@ -92,14 +83,6 @@ function SignUp() {
   const validateLoginForm = () => {
     const newErrors = {};
 
-    const useridRegex = /^[A-Za-z]{4}[!@#$%^&*][0-9]{4}$/;
-
-    if (!loginFormData.userid.trim()) {
-      newErrors.userid = "User ID is required.";
-    } else if (!useridRegex.test(loginFormData.userid)) {
-      newErrors.userid = "User ID must be 4 letters, 1 special character, and 4 numbers.";
-    }
-    
     if (!loginFormData.userid.trim()) newErrors.userid = "User ID is required.";
     if (!loginFormData.firstName.trim()) newErrors.firstName = "First name is required.";
     if (!loginFormData.lastName.trim()) newErrors.lastName = "Last name is required.";
