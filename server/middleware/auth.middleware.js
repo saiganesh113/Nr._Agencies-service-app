@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/user.model.js'; // Ensure you're using ES module import
+import User from '../models/user.model.js';
 
 const protectRoute = async (req, res, next) => {
   let token;
@@ -13,8 +13,8 @@ const protectRoute = async (req, res, next) => {
       // Verify the token using the secret key
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Find the user by the userid in the decoded token
-      req.user = await User.findOne({ userid: decoded.userid });
+      // Find the user by the id in the decoded token
+      req.user = await User.findOne({ _id: decoded.id });
 
       // If user is not found, send unauthorized response
       if (!req.user) {
@@ -27,12 +27,10 @@ const protectRoute = async (req, res, next) => {
       console.error('Token verification failed:', error.message);
       return res.status(401).json({ message: 'Unauthorized, token invalid' });
     }
-  }
-
-  // If no token is provided in the request
-  if (!token) {
+  } else {
+    // If no token is provided in the request
     return res.status(401).json({ message: 'Unauthorized, no token provided' });
   }
 };
 
-export { protectRoute }; // Exporting protectRoute as a named export
+export { protectRoute };

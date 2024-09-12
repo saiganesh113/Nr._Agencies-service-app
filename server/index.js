@@ -19,7 +19,11 @@ import paymentRoutes from './routes/payment.route.js';
 const app = express();
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+  origin: 'http://localhost:3000', // Adjust to your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
 app.use(helmet()); // Secure HTTP headers
 app.use(bodyParser.json({ limit: '20mb' })); // Parse incoming JSON requests
 app.use(bodyParser.urlencoded({ limit: '20mb', extended: true })); // Parse URL-encoded data

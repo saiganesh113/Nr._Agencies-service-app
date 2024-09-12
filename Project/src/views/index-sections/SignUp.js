@@ -20,7 +20,6 @@ function SignUp() {
   const [isSignIn, setIsSignIn] = useState(true);
   const navigate = useNavigate();
   
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || `http://localhost:5000`;
 
   const validateForm = () => {
     const newErrors = {};
@@ -53,7 +52,7 @@ function SignUp() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register-technician`, formData);
+      const response = await axios.post(`http://localhost:5000/api/auth/register-technician`, formData);
       console.log(response.data);
       navigate("/login-page");
     } catch (error) {
@@ -106,7 +105,7 @@ function SignUp() {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register-user`, loginFormData);
+      const response = await axios.post(`http://localhost:5000/api/auth/register-user`, loginFormData);
       console.log(response.data);
       navigate("/login-page"); // Redirect based on user role or dashboard
     } catch (error) {
