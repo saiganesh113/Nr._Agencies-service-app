@@ -84,28 +84,46 @@ export const getAllPayments = async (req, res) => {
   }
 };
 
-export const handleOrderAction = async (req, res) => {
-    try {
-      const { transactionId, action } = req.body;
-      const validActions = ['complete', 'cancel'];
-  
-      if (!validActions.includes(action)) {
-        return res.status(400).json({ error: 'Invalid action' });
-      }
-  
-      const updatedOrder = await OrderModel.findOneAndUpdate(
-        { transactionId },
-        { status: action },
-        { new: true }
-      );
-  
-      if (!updatedOrder) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-  
-      res.json(updatedOrder);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to handle order action' });
+export const completeOrder = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+
+    // Find the order by transactionId and update its status
+    const order = await Payment.findOneAndUpdate(
+      { transactionId },
+      { paymentStatus: 'success' },
+      { new: true } // Return the updated document
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
     }
-  };
+
+    res.status(200).json({ message: 'Order marked as completed', order });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to complete order', error });
+  }
+};
+
+// Cancel Order
+export const cancelOrder = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+
+    // Find the order by transactionId and update its status
+    const order = await Payment.findOneAndUpdate(
+      { transactionId },
+      { paymentStatus: 'cancelled' },
+      { new: true } // Return the updated document
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.status(200).json({ message: 'Order cancelled', order });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to cancel order', error });
+  }
+};
   

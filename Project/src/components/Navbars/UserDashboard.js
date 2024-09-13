@@ -2,7 +2,7 @@ import React, { useState,useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import './UserDashboard.css';
 import axios from "axios";
-import AuthStore from '../Navbars/AuthStore';
+// import AuthStore from '../Navbars/AuthStore';
 import 'assets/css/bootstrap.min.css';
 import { Link, } from 'react-scroll';
 import { Card, CardBody, CardTitle, CardText, Button} from 'react-bootstrap'; 
@@ -128,7 +128,7 @@ useEffect(() => {
 
         console.log('API Response:', response);
 
-        const userDetails = response.data.data || response.data;
+        const userDetails = response.data;
 
         if (!userDetails) {
           throw new Error('User details are not available.');

@@ -1,5 +1,5 @@
 import express from 'express';
-import { processPayment, getPaymentsByUserId, getAllPayments, handleOrderAction } from '../controllers/payment.controller.js'; // Adjust path if necessary
+import { processPayment, getPaymentsByUserId, getAllPayments, completeOrder, cancelOrder } from '../controllers/payment.controller.js'; // Adjust path if necessary
 
 const router = express.Router();
 
@@ -13,6 +13,10 @@ router.get('/user/:userid', getPaymentsByUserId);
 router.get('/users', getAllPayments);
 
 
-router.post('/action', handleOrderAction);
+// Complete order by transactionId
+router.post('/complete/:transactionId', completeOrder);
+
+// Cancel order by transactionId
+router.post('/cancel/:transactionId', cancelOrder);
 
 export default router;
