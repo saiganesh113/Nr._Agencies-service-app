@@ -18,6 +18,7 @@ import {Chart as ChartJS,ArcElement,Tooltip,Legend,} from 'chart.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useNavigate } from 'react-router-dom';
 import {jwtDecode} from 'jwt-decode';
+import { min } from 'moment';
 
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -56,7 +57,7 @@ const UserDashboard = () => {
 
   // Define the phone number and construct the WhatsApp link
   const phoneNumber = '9494412464';
-  const whatsappLink = `https://wa.me/${phoneNumber}`;
+  const whatsappLink = `https://wa.me/${phoneNumber}?text=Hello!`;
   const phoneLink = `tel:${phoneNumber}`;
   // const toggleVisibility = () => {
   //   setIsVisible(!isVisible);
@@ -89,11 +90,9 @@ const UserDashboard = () => {
 
 const [personalDetails, setPersonalDetails] = useState({
   userid: '',
-  firstName: '',
-  lastName: '',
+  Name: '',
   mobileNumber: '',
   email: '',
-  dateOfBirth: '',
 });
 
 useEffect(() => {
@@ -136,17 +135,12 @@ useEffect(() => {
 
         console.log('User Details:', userDetails);
 
-        const formattedDateOfBirth = userDetails.dateofbirth
-          ? new Date(userDetails.dateofbirth).toISOString().split('T')[0]
-          : '';
 
         setPersonalDetails({
           userid: userDetails.userid || '',
-          firstName: userDetails.firstName || '',
-          lastName: userDetails.lastName || '',
+          Name: userDetails.Name || '',
           mobileNumber: userDetails.phone || '',
           email: userDetails.email || '',
-          dateOfBirth: formattedDateOfBirth,
         });
       } else {
         setError('User ID missing.');
@@ -227,7 +221,7 @@ const handleLogout = () => {
   const handleProceedToPay = async () => {
     try {
       const userid = localStorage.getItem('user_id');  // Retrieve user_id from localStorage
-      console.log('Retrieved userid:', userid);
+      // console.log('Retrieved userid:', userid);
 
       if (!userid) {
         throw new Error('Userid is required for payment processing');
@@ -291,7 +285,17 @@ const handleLogout = () => {
 
   const handleConfirmBooking = async () => {
     try {
-      if (!userid || !selectedDate || !selectedTime || !address) {
+      // Retrieve the userid from localStorage
+      const userid = localStorage.getItem('user_id');
+    
+      // Check if userid is retrieved successfully
+      if (!userid) {
+        setError('User ID not found. Please log in again.');
+        return;
+      }
+  
+      // Ensure required fields are present
+      if (!selectedDate || !selectedTime || !address) {
         setError('All fields are required.');
         return;
       }
@@ -301,6 +305,7 @@ const handleLogout = () => {
       let [time, modifier] = selectedTime.split(' ');
       let [hour, minute] = time.split(':').map(Number);
   
+      // Adjust time based on AM/PM modifier
       if (modifier === 'PM' && hour < 12) {
         hour += 12;
       } else if (modifier === 'AM' && hour === 12) {
@@ -313,54 +318,56 @@ const handleLogout = () => {
         return;
       }
   
-      // Ensure price and discount are properly handled
+      // Safely handle price and discount parsing
       const discountAmount = typeof currentItem.discount === 'number'
         ? currentItem.discount
-        : parseFloat(currentItem.discount.replace(/[^0-9.-]+/g, '')) || 0;
+        : parseFloat(currentItem?.discount?.replace(/[^0-9.-]+/g, '')) || 0;
   
       let itemTotalPrice = typeof currentItem.price === 'number'
         ? currentItem.price - discountAmount
-        : parseFloat(currentItem.price.replace(/[^0-9.-]+/g, '')) - discountAmount;
+        : parseFloat(currentItem?.price?.replace(/[^0-9.-]+/g, '')) - discountAmount;
   
-      itemTotalPrice = itemTotalPrice > 0 ? itemTotalPrice : currentItem.price;
+      // Ensure itemTotalPrice is non-negative and properly calculated
+      itemTotalPrice = itemTotalPrice > 0 ? itemTotalPrice : currentItem.price || 0;
   
-      // Create cart item with proper calculations
+      // Create the cart item object
       const cartItem = {
         ...currentItem,
-        userid, // Ensure userid is included
+        userid: personalDetails.userid, // Use userid from personalDetails
+        Number: personalDetails.mobileNumber, // Ensure mobile number is pulled correctly
         slotBookedTime: slotBookedTime.toISOString(),
         slotBookedDate: selectedDate,
-        estimatedTime: currentItem.estimatedTime || 'N/A', // Use default if not provided
+        estimatedTime: currentItem.estimatedTime || 'N/A',
         totalPrice: itemTotalPrice,
-        address // Ensure address is included
+        address // Include the address
       };
   
       // Add the item to the cart
       const updatedCart = [...cart, cartItem];
   
-      // Apply additional discount if there are multiple items in the cart
+      // Apply discounts if applicable
       const discountForMultipleItems = updatedCart.length >= 2 ? 100 : 0;
       const totalAmount = updatedCart.reduce((total, item) => total + item.totalPrice, 0);
       const discountedTotalAmount = totalAmount - (discountForMultipleItems / updatedCart.length);
   
+      // Log the total amount for confirmation
       console.log(`Total Amount: ₹${discountedTotalAmount.toFixed(2)}`);
   
-      // Update the cart with the new total amount
+      // Update the cart state and clear form fields
       setCart(updatedCart);
-  
-      // Clear the form fields and close modals
       setSelectedDate('');
       setSelectedTime('');
       setShowSlotModal(false);
       setShowCartModal(true);
-
-        // Send the request to the backend
-        await axios.post('http://localhost:5000/api/carts', cartItem);
-      } catch (error) {
-        console.error('Error during booking process:', error);
-        setError('An error occurred while booking the slot. Please try again.');
-      }
-    };
+  
+      // Send the booking details to the backend
+      await axios.post('http://localhost:5000/api/carts', cartItem);
+    } catch (error) {
+      console.error('Error during booking process:', error);
+      setError('An error occurred while booking the slot. Please try again.');
+    }
+  };
+    
   
   useEffect(() => {
     if (navigator.geolocation) {
@@ -381,9 +388,15 @@ const handleLogout = () => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const handleAddToCart = (item) => {
-    setCurrentItem(item); // Set the current item
-    setShowSlotModal(true); // Show the slot booking modal
-  };
+      // Proceed with setting the current item and showing the slot booking modal
+      setCurrentItem(item); // Set the current item
+      setShowSlotModal(true); // Show the slot booking modal
+
+  
+      // Additional logic for adding the item to the cart can go here
+    }
+  
+  
 
   const handleRemoveFromCart = (itemId) => {
     setCart((prevCart) => prevCart.filter((item) => item._id !== itemId));
@@ -491,41 +504,269 @@ const handleLogout = () => {
   const content1 = [
     {
       title1: "Transparent Pricing and Hassle-Free Deals",
-      text1: "No more retired freights or unforeseen shocks! NR Agencies ensures that you are apprehensive of all your costs from the progeny- go. We believe in clear, straightforward pricing grounded on the named services. Plus, with our digital payment styles, you can settle your service charges securely and at your convenience, indeed from the warmth of your home."
+      text1: "No more retired freights or unforeseen shocks! SREE TQ ensures that you are apprehensive of all your costs from the progeny- go. We believe in clear, straightforward pricing grounded on the named services. Plus, with our digital payment styles, you can settle your service charges securely and at your convenience, indeed from the warmth of your home."
     },
     {
       title1: "Competitive Edge Over Others",
-      text1: "Wondering why NR Agencies stands out in the crowd? Unlike our challengers like NoBroker, OneAssist, and OnSiteGo, we prioritize not just fixing issues but furnishing an unequaled experience. While others may concentrate on one aspect, NR Agencies is your holistic mate in icing your AC runs easily and efficiently."
+      text1: "Wondering why Sree Teq stands out in the crowd? Unlike our challengers like NoBroker, OneAssist, and OnSiteGo, we prioritize not just fixing issues but furnishing an unequaled experience. While others may concentrate on one aspect, Sree Teq is your holistic mate in icing your AC runs easily and efficiently."
     },
     {
       title1: "Convenience Readdressed",
-      text1: "Say farewell to the hassle of searching' ac service centre near me' – NR agencies brings the service center to your doorstep. Our on- time service and hassle-free experience insure that you can sit back and relax while we take care of your AC troubles."
+      text1: "Say farewell to the hassle of searching' ac service centre near me' – Sree Teq brings the service center to your doorstep. Our on- time service and hassle-free experience insure that you can sit back and relax while we take care of your AC troubles."
     },
     {
       title1: "Environmentally Friendly Practices",
-      text1: "Are you troubled by the environmental counteraccusations of AC servicing? Put your worries away, as we echo your studies. As a result, we conclude for green and inoffensive results that pose zero pitfalls to your loved bones, including the little bones and furry musketeers. With NR Agencies, achieve a chilly and cozy home without shirking from youreco-conscious duties."
+      text1: "Are you troubled by the environmental counteraccusations of AC servicing? Put your worries away, as we echo your studies. As a result, we conclude for green and inoffensive results that pose zero pitfalls to your loved bones, including the little bones and furry musketeers. With Sree Teq, achieve a chilly and cozy home without shirking from youreco-conscious duties."
     },
     {
       title1: "Comprehensive AC Solutions, Near By",
-      text1: "Whether it's Split or Window AC installation, form, or a routine check- up, NR Agencies offers a comprehensive range of services acclimatized to your requirements. From' ac gas cache' to' ac conservation services,' we have got it all covered. Our commitment to being a one- stop result for all your AC conditions sets us piecemeal from the rest."
+      text1: "Whether it's Split or Window AC installation, form, or a routine check- up, Sree Teq offers a comprehensive range of services acclimatized to your requirements. From' ac gas cache' to' ac conservation services,' we have got it all covered. Our commitment to being a one- stop result for all your AC conditions sets us piecemeal from the rest."
     },
     {
       title1: "Expertise that Speaks Volumes",
-      text1: "At NR Agencies, we take pride in the moxie of our technicians. Our platoon isn't just trained; they're seasoned professionals who understand the sways and outs of AC servicing, form, and installation. When you choose us, you are not just getting a service; you are getting an experience backed by times of knowledge and hands- on moxie. No more settling for medium service – NR Agencies delivers excellence."
+      text1: "At Sree Teq, we take pride in the moxie of our technicians. Our platoon isn't just trained; they're seasoned professionals who understand the sways and outs of AC servicing, form, and installation. When you choose us, you are not just getting a service; you are getting an experience backed by times of knowledge and hands- on moxie. No more settling for medium service – Sree Teq delivers excellence."
     },
     {
       title1: "Flawless Booking with a Click",
-      text1: "NR Agencies understands that your time is precious. Our stoner-friendly platform allows you to bespeak AC services near you with just a many clicks. No more hassle of finding' ac service centre near you ’ options – we have streamlined the process for your convenience. Your comfort is our precedence, starting from the moment you decide to bespeak our services."
+      text1: "Sree Teq understands that your time is precious. Our stoner-friendly platform allows you to bespeak AC services near you with just a many clicks. No more hassle of finding' ac service centre near you ’ options – we have streamlined the process for your convenience. Your comfort is our precedence, starting from the moment you decide to bespeak our services."
     },
     {
       title1: "Responsibility You Can Count On Us",
-      text1: "Trust is the foundation of any service, especially when it comes to commodity as vital as your AC. We understand the trust you place in us, and we repay it with translucency and trustability. Our commitment to being the stylish in the business is reflected in every aspect of our service – from the first commerce to the final result. Choose NR Agencies for AC service and form that you can trust without alternate- guessing."
+      text1: "Trust is the foundation of any service, especially when it comes to commodity as vital as your AC. We understand the trust you place in us, and we repay it with translucency and trustability. Our commitment to being the stylish in the business is reflected in every aspect of our service – from the first commerce to the final result. Choose Sree Teq for AC service and form that you can trust without alternate- guessing."
     },
     {
       title1: "Unmatched Bond and Satisfaction Guarantee",
       text1: "Our faith in the excellence of our sweats is solid, which is reflected in our 30- day service bond. Should you face any interruptions during this span, flash back , we're just a call down, ready to set it all straight, no probations involved. icing your happiness is our ideal, and we'd move mountains to make sure you're entirely pleased with the outgrowth."
     }
   ];
+
+
+  const [wrepairs, setWrepairs] = useState([]); 
+  const [winstallations, setWinstallations] = useState([]);
+  const [wuninstallations, setWuninstallations] = useState([]);
+  const [selectedRepairIssues, setSelectedRepairIssues] = useState({});
+  const repairPricePerIssue = 160;
+
+  useEffect(() => {
+    const fetchWashRepairs = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/wrepairs');
+        setWrepairs(response.data); // Set the repair services from the backend
+      } catch (error) {
+        console.error('Error fetching repairs:', error);
+      }
+    };
+
+    const fetchWashInstallations = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/winstallations');
+        setWinstallations(response.data); // Set the installation services from the backend
+      } catch (error) {
+        console.error('Error fetching installations:', error);
+      }
+    };
+
+    const fetchWashUninstallations = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/wuninstallations');
+        setWuninstallations(response.data); // Set the uninstallation services from the backend
+      } catch (error) {
+        console.error('Error fetching uninstallations:', error);
+      }
+    };
+
+    // Call all fetch functions
+    fetchWashRepairs();
+    fetchWashInstallations();
+    fetchWashUninstallations();
+  }, []);
+
+  // const handleRepairCheckboxChange = (repairId, issue) => {
+  //   setSelectedRepairIssues((prevSelected) => {
+  //     const issues = prevSelected[repairId] || [];
+  //     if (issues.includes(issue)) {
+  //       return {
+  //         ...prevSelected,
+  //         [repairId]: issues.filter((i) => i !== issue),
+  //       };
+  //     } else {
+  //       return {
+  //         ...prevSelected,
+  //         [repairId]: [...issues, issue],
+  //       };
+  //     }
+  //   });
+  // };
+
+  // const calculateRepairTotalPrice = (repairId) => {
+  //   const issues = selectedRepairIssues[repairId] || [];
+  //   return issues.length * repairPricePerIssue;
+  // };
+
+  const handleRepairCheckboxChange = (repairId, issue) => {
+    setSelectedRepairIssues((prevSelected) => {
+      const currentIssuesForRepair = prevSelected[repairId] || [];
+      
+      if (currentIssuesForRepair.includes(issue)) {
+        return {
+          ...prevSelected,
+          [repairId]: currentIssuesForRepair.filter((i) => i !== issue), // Remove issue
+        };
+      } else {
+        return {
+          ...prevSelected,
+          [repairId]: [...currentIssuesForRepair, issue], // Add issue
+        };
+      }
+    });
+  };
+  
+  // Function to calculate the total price based on selected issues for a specific repairId
+  const calculateRepairTotalPrice = (repairId) => {
+    const selectedIssues = selectedRepairIssues[repairId] || [];
+    if (selectedIssues.length === 0) {
+      return 0; // If no issues are selected, return 0
+    }
+    
+    const totalIssuePrice = selectedIssues.length * repairPricePerIssue;
+    return totalIssuePrice;
+  };
+
+  
+  
+
+const fridgePricePerIssue = 99;
+
+const singledoors = [
+  {
+    id: 1,
+    name: 'Single Door Refrigerator',
+    type: 'Checkups',
+    price: 99,
+    time: '60 min',
+    doorissues: [
+      'Excess cooling',
+      'No cooling',
+      'Door not closing',
+      'Power issue',
+      'Noise',
+      'Water leakage',
+    ],
+  },
+];
+
+const doubledoors = [
+  {
+    id: 1,
+    name: 'Double Door Refrigerator',
+    type: 'Inverter',
+    price: 99,
+    time: '60 min',
+    doorissues: [
+      'Excess cooling',
+      'Less cooling',
+      'No cooling',
+      'Power Issue',
+      'Noise',
+      'Water leakage',
+    ],
+  },
+  {
+    id: 2,
+    name: 'Double Door Refrigerator',
+    type: 'Non-Inverter',
+    price: 99,
+    time: '60 min',
+    doorissues: [
+      'Excess cooling',
+      'Less cooling',
+      'No cooling',
+      'Power issue',
+      'Door not closing',
+      'Noise',
+      'Water leakage',
+    ],
+  },
+];
+
+const sidebysidedoors = [
+  {
+    id: 1,
+    name: 'Side-By-Side Door',
+    type: 'Checkups',
+    price: 99,
+    time: '60 min',
+    doorissues: [
+      'Excess cooling',
+      'No cooling',
+      'Door not closing',
+      'Cooling issue in deep freezer only',
+      'Power issue',
+      'Noise',
+      'Water leakage (ice bucket)',
+      'Water leakage (compartment)',
+    ],
+  },
+];
+
+const [selectedSingleDoorIssues, setSelectedSingleDoorIssues] = useState({});
+const [selectedDoubleDoorIssues, setSelectedDoubleDoorIssues] = useState({});
+const [selectedSideBySideDoorIssues, setSelectedSideBySideDoorIssues] = useState({});
+
+const handleSingleDoorIssueChange = (id, issue) => {
+  setSelectedSingleDoorIssues((prev) => {
+    const updatedIssues = prev[id] ? [...prev[id]] : [];
+    if (updatedIssues.includes(issue)) {
+      return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
+    } else {
+      return { ...prev, [id]: [...updatedIssues, issue] };
+    }
+  });
+};
+
+  // Handle double door issue changes
+  const handleDoubleDoorIssueChange = (id, issue) => {
+    setSelectedDoubleDoorIssues((prev) => {
+      const updatedIssues = prev[id] ? [...prev[id]] : [];
+      if (updatedIssues.includes(issue)) {
+        return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
+      } else {
+        return { ...prev, [id]: [...updatedIssues, issue] };
+      }
+    });
+  };
+
+  // Handle side-by-side door issue changes
+  const handleSideBySideDoorIssueChange = (id, issue) => {
+    setSelectedSideBySideDoorIssues((prev) => {
+      const updatedIssues = prev[id] ? [...prev[id]] : [];
+      if (updatedIssues.includes(issue)) {
+        return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
+      } else {
+        return { ...prev, [id]: [...updatedIssues, issue] };
+      }
+    });
+  };
+
+// Calculate the total price based on selected issues for each fridge type
+const calculateFridgeTotalPrice = (fridgeId) => {
+  const issues = selectedSingleDoorIssues[fridgeId] || [];
+  return issues.length * fridgePricePerIssue;
+};
+
+ // Calculate total price for double door refrigerators
+ const calculateDoubleDoorTotalPrice = (fridgeId) => {
+  const issues = selectedDoubleDoorIssues[fridgeId] || [];
+  return issues.length * fridgePricePerIssue;
+};
+
+// Calculate total price for side-by-side door refrigerators
+const calculateSideBySideTotalPrice = (fridgeId) => {
+  const issues = selectedSideBySideDoorIssues[fridgeId] || [];
+  return issues.length * fridgePricePerIssue;
+};
+
+  
 
   return (
     <div className="container">
@@ -614,62 +855,71 @@ const handleLogout = () => {
 
       {/* Slot Booking Modal */}
       <Modal show={showSlotModal} onHide={() => setShowSlotModal(false)}>
-        <Modal.Header closeButton>
-            <Modal.Title>Book Slot</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-            <div className="mb-3">
-                <label htmlFor="userid" className="form-label">Enter User ID</label>
-                <input 
-                    type="text" 
-                    className="form-control" 
-                    id="userid" 
-                    value={userid} 
-                    onChange={(e) => setUserid(e.target.value)} 
-                    placeholder="Enter your user ID"
-                />
-            </div>
-            <div className="mb-3">
-                <label htmlFor="date" className="form-label">Select Date</label>
-                <input 
-                    type="date" 
-                    className="form-control" 
-                    id="date" 
-                    value={selectedDate} 
-                    onChange={(e) => setSelectedDate(e.target.value)} 
-                />
-            </div>
-            <div className="mb-3">
-                <label htmlFor="time" className="form-label">Select Time Slot</label>
-                <select 
-                    className="form-select" 
-                    id="time" 
-                    value={selectedTime} 
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                >
-                    <option value="">Select Time</option>
-                    {availableSlots.map((slot, index) => (
-                    <option key={index} value={slot}>{slot}</option>
-                    ))}
-                </select>
-            </div>
-            <div className="mb-3">
-                <label htmlFor="address" className="form-label">Enter Address</label>
-                <input 
-                    type="text" 
-                    className="form-control" 
-                    id="address" 
-                    value={address} 
-                    onChange={(e) => setAddress(e.target.value)} 
-                    placeholder="Enter your address"
-                />
-            </div>
-            {error && <div className="alert alert-danger" role="alert">{error}</div>}
-        </Modal.Body>
-        <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowSlotModal(false)}>Close</Button>
-            <Button variant="primary" onClick={handleConfirmBooking}>Confirm Booking</Button>
-        </Modal.Footer>
+      <Modal.Header closeButton>
+        <Modal.Title>Book Slot</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="mb-3">
+          <label htmlFor="userid" className="form-label">User ID</label>
+          <input 
+            type="text" 
+            className="form-control" 
+            id="userid" 
+            value={personalDetails.userid} // Set user ID from userDetails
+            readOnly // Make it read-only
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="mobileNumber" className="form-label">Mobile Number</label>
+          <input 
+            type="text" 
+            className="form-control" 
+            id="mobileNumber" 
+            value={personalDetails.mobileNumber} // Set mobile number from userDetails
+            readOnly // Make it read-only
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="date" className="form-label">Select Date</label>
+          <input 
+            type="date" 
+            className="form-control" 
+            id="date" 
+            value={selectedDate} 
+            onChange={(e) => setSelectedDate(e.target.value)} 
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="time" className="form-label">Select Time Slot</label>
+          <select 
+            className="form-select" 
+            id="time" 
+            value={selectedTime} 
+            onChange={(e) => setSelectedTime(e.target.value)}
+          >
+            <option value="">Select Time</option>
+            {availableSlots.map((slot, index) => (
+              <option key={index} value={slot}>{slot}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-3">
+          <label htmlFor="address" className="form-label">Enter Address</label>
+          <input 
+            type="text" 
+            className="form-control" 
+            id="address" 
+            value={address} 
+            onChange={(e) => setAddress(e.target.value)} 
+            placeholder="Enter your address"
+          />
+        </div>
+        {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowSlotModal(false)}>Close</Button>
+        <Button variant="primary" onClick={handleConfirmBooking}>Confirm Booking</Button>
+      </Modal.Footer>
       </Modal>
 
       {/* Service Section */}
@@ -756,143 +1006,565 @@ const handleLogout = () => {
       </div>
       {/* Service Section */}
       <div id="service-section" className="d-flex justify-content-between align-items-center mb-2">
-      <h2 style={{ fontSize: '2.5rem' }}>Service</h2>
-      <a href="#service-section" className="text-primary">Know more</a>
+        <h2 style={{ fontSize: '2.5rem' }}>Service</h2>
+        <a href="#service-section" className="text-primary">Know more</a>
       </div>
       <div className="row">
         {services.map((service) => (
           <div className="col-md-6 mb-4" key={service.id}>
             <div className="card h-100">
-              <div className="card-body">
-                <h5 className="card-title">{service.name}</h5>
-                <p className="card-text  ">Type: {service.type}</p>
-                <p className="card-text">Price: ₹{service.price}</p>
-                <p className="card-text">Discount: ₹{service.discount}</p>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">{service.technology}</p>
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{service.name}</h5>
+                  <p className="card-text">Type: {service.type}</p>
+                  <p className="card-text">Price: ₹{service.price}</p>
+                  <p className="card-text">Discount: {service.discount}</p>
+                  <div className="d-flex align-items-center mb-2">
+                    <svg width="16" height="16" fill="#07794C">
+                      <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" />
+                    </svg>
+                    <p className="mb-0 ms-2">{service.technology}</p>
+                  </div>
+                  <div className="d-flex align-items-center mb-2">
+                    <svg width="16" height="16" fill="#07794C">
+                      <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" />
+                    </svg>
+                    <p className="mb-0 ms-2">Warranty: {service.warranty}</p>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <Button
+                      style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                      onClick={() => handleAddToCart(service)}
+                    >
+                      Add to Cart
+                    </Button>
+                    <span className="text-muted">Estimated Time: {service.time}</span>
+                  </div>
                 </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Warranty: {service.warranty}</p>
-                </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M2.75 4a1.5 1.5 0 113 0v.5H2.75A2.25 2.25 0 00.5 6.75v6A2.25 2.25 0 002.75 15h7.5A2.25 2.25 0 0012.5 12.75v-6A2.25 2.25 0 0010.25 4H9.5V2.25A2.25 2.25 0 007.25 0h-1.5A2.25 2.25 0 003 2.25V4h-.5A1.5 1.5 0 011 5.5v.25a.25.25 0 00.25.25h2.5v-.5A1.5 1.5 0 014 4H2.75zM3 1.75A1.75 1.75 0 014.75 0h1.5A1.75 1.75 0 018 1.75V4H3V1.75zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Cleaning: {service.cleaning}</p>
-                </div>
-                <div className="d-flex justify-content-between align-items-center">
-                <Button style={{ backgroundColor: '#007bff', borderColor: '#007bff' }} onClick={() => handleAddToCart(service)}>Add to Cart</Button>
-                  <span className="text-muted">Estimated Time: {service.time}</span>
-                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}${service.image}`}
+                  alt={service.name}
+                  style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                />
               </div>
               <div className="card-footer text-center bg-light p-2">
-            <large className="text-muted">Price: ₹{service.price}</large>
-            </div>
+                <large className="text-muted">Price: ₹{service.price}</large>
+              </div>
             </div>
           </div>
         ))}
       </div>
-
       <br/>
 
         {/* Repair Section */}
-      <div id="repair-section" className="d-flex justify-content-between align-items-center mb-2">
-      <h2 style={{ fontSize: '2.5rem' }}>Repair & Gas refill</h2>
-        <a href="#repair-section" className="text-primary">Know more</a>
-      </div>
-      <div className="row">
-        {repairs.map((repair) => (
-          <div className="col-md-6 mb-4" key={repair.id}>
-            <div className="card h-100">
-              <div className="card-body">
-                <h5 className="card-title">{repair.name}</h5>
-                <p className="card-text  ">Type: {repair.type}</p>
-                <p className="card-text">Price: ₹{repair.price}</p>
-                <p className="card-text">Discount: ₹{repair.discount}</p>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">{repair.technology}</p>
+        <div id="repair-section" className="d-flex justify-content-between align-items-center mb-2">
+          <h2 style={{ fontSize: '2.5rem' }}>Repair & Gas Refill</h2>
+          <a href="#repair-section" className="text-primary">Know more</a>
+        </div>
+        <div className="row">
+          {repairs.map((repair) => (
+            <div className="col-md-6 mb-4" key={repair.id}>
+              <div className="card h-100">
+                <div className="card-body d-flex align-items-center justify-content-between">
+                  {/* Text Section */}
+                  <div>
+                    <h5 className="card-title">{repair.name}</h5>
+                    <p className="card-text">Type: {repair.type}</p>
+                    <p className="card-text">Price: ₹{repair.price}</p>
+                    <p className="card-text">Discount: ₹{repair.discount}</p>
+                    <div className="d-flex align-items-center mb-2">
+                      <svg width="16" height="16" fill="#07794C">
+                        <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" />
+                      </svg>
+                      <p className="mb-0 ms-2">{repair.technology}</p>
+                    </div>
+                    <div className="d-flex align-items-center mb-2">
+                      <svg width="16" height="16" fill="#07794C">
+                        <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" />
+                      </svg>
+                      <p className="mb-0 ms-2">Warranty: {repair.warranty}</p>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <Button
+                        style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                        onClick={() => handleAddToCart(repair)}
+                      >
+                        Add to Cart
+                      </Button>
+                      <span className="text-muted">Estimated Time: {repair.time}</span>
+                    </div>
+                  </div>
+
+                  {/* Image Section */}
+                  <img
+                    src={`${process.env.PUBLIC_URL}${repair.image}`}
+                    alt={repair.name}
+                    style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                  />
                 </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Warranty: {repair.warranty}</p>
-                </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M2.75 4a1.5 1.5 0 113 0v.5H2.75A2.25 2.25 0 00.5 6.75v6A2.25 2.25 0 002.75 15h7.5A2.25 2.25 0 0012.5 12.75v-6A2.25 2.25 0 0010.25 4H9.5V2.25A2.25 2.25 0 007.25 0h-1.5A2.25 2.25 0 003 2.25V4h-.5A1.5 1.5 0 011 5.5v.25a.25.25 0 00.25.25h2.5v-.5A1.5 1.5 0 014 4H2.75zM3 1.75A1.75 1.75 0 014.75 0h1.5A1.75 1.75 0 018 1.75V4H3V1.75zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Cleaning: {repair.cleaning}</p>
-                </div>
-                <div className="d-flex justify-content-between align-items-center">
-                <Button style={{ backgroundColor: '#007bff', borderColor: '#007bff' }} onClick={() => handleAddToCart(repair)}>Add to Cart</Button>
-                  <span className="text-muted">Estimated Time: {repair.time}</span>
+                <div className="card-footer text-center bg-light p-2">
+                  <large className="text-muted">Price: ₹{repair.price}</large>
                 </div>
               </div>
-              <div className="card-footer text-center bg-light p-2">
-            <large className="text-muted">Price: ₹{repair.price}</large>
             </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       <br/>
 
         {/* install Section */}
         <div id="install-section" className="d-flex justify-content-between align-items-center mb-2">
-        <h2 style={{ fontSize: '2.5rem' }}>Install & Uninstall</h2>
+          <h2 style={{ fontSize: '2.5rem' }}>Install & Uninstall</h2>
           <a href="#install-section" className="text-primary">Know more</a>
         </div>
         <div className="row">
-        {installations.map((installation) => (
-          <div className="col-md-6 mb-4" key={installation.id}>
-            <div className="card h-100">
-              <div className="card-body">
-                <h5 className="card-title">{installation.name}</h5>
-                <p className="card-text  ">Type: {installation.type}</p>
-                <p className="card-text">Price: ₹{installation.price}</p>
-                <p className="card-text">Discount: ₹{installation.discount}</p>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">{installation.technology}</p>
+          {installations.map((installation) => (
+            <div className="col-md-6 mb-4" key={installation.id}>
+              <div className="card h-100">
+                <div className="card-body d-flex align-items-center justify-content-between">
+                  {/* Text Section */}
+                  <div>
+                    <h5 className="card-title">{installation.name}</h5>
+                    <p className="card-text">Type: {installation.type}</p>
+                    <p className="card-text">Price: ₹{installation.price}</p>
+                    <p className="card-text">Discount: ₹{installation.discount}</p>
+                    <div className="d-flex align-items-center mb-2">
+                      <svg width="16" height="16" fill="#07794C">
+                        <path d="M2 2.5a2.5 2.5 0 015 0V4h2V2.5a2.5 2.5 0 015 0V4h1.25A2.75 2.75 0 0118 6.75v10.5A2.75 2.75 0 0115.25 20H2.75A2.75 2.75 0 010 17.25V6.75A2.75 2.75 0 012.75 4H4V2.5zm3 0a1 1 0 10-2 0V4h2V2.5zm8 0a1 1 0 10-2 0V4h2V2.5zM2.75 6a.75.75 0 00-.75.75V17.25c0 .414.336.75.75.75h12.5a.75.75 0 00.75-.75V6.75a.75.75 0 00-.75-.75H2.75z" />
+                      </svg>
+                      <p className="mb-0 ms-2">{installation.technology}</p>
+                    </div>
+                    <div className="d-flex align-items-center mb-2">
+                      <svg width="16" height="16" fill="#07794C">
+                        <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" />
+                      </svg>
+                      <p className="mb-0 ms-2">Warranty: {installation.warranty}</p>
+                    </div>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <Button
+                        style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                        onClick={() => handleAddToCart(installation)}
+                      >
+                        Add to Cart
+                      </Button>
+                      <span className="text-muted">Estimated Time: {installation.time}</span>
+                    </div>
+                  </div>
+
+                  {/* Image Section */}
+                  <img
+                    src={`${process.env.PUBLIC_URL}${installation.image}`}
+                    alt={installation.name}
+                    style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                  />
                 </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7.25 4h-2.5v-.5A.75.75 0 003 4v.5H2.25A2.25 2.25 0 000 6.75v6A2.25 2.25 0 002.25 15h7.5A2.25 2.25 0 0012 12.75v-6A2.25 2.25 0 009.75 4H9V2.25A2.25 2.25 0 006.75 0h-1.5A2.25 2.25 0 003 2.25V4zm1-1.75a.25.25 0 01.25-.25h1.5a.25.25 0 01.25.25V4h-2V2.25zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Warranty: {installation.warranty}</p>
-                </div>
-                <div className="d-flex align-items-center mb-2">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="#07794C" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M2.75 4a1.5 1.5 0 113 0v.5H2.75A2.25 2.25 0 00.5 6.75v6A2.25 2.25 0 002.75 15h7.5A2.25 2.25 0 0012.5 12.75v-6A2.25 2.25 0 0010.25 4H9.5V2.25A2.25 2.25 0 007.25 0h-1.5A2.25 2.25 0 003 2.25V4h-.5A1.5 1.5 0 011 5.5v.25a.25.25 0 00.25.25h2.5v-.5A1.5 1.5 0 014 4H2.75zM3 1.75A1.75 1.75 0 014.75 0h1.5A1.75 1.75 0 018 1.75V4H3V1.75zM1.5 6.75a.75.75 0 01.75-.75h7.5a.75.75 0 01.75.75V9H1.5V6.75zM1.5 10h9v2.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V10zm3.25 1.25a.25.25 0 00-.25.25v.5a.25.25 0 00.25.25h2.5a.25.25 0 00.25-.25v-.5a.25.25 0 00-.25-.25h-2.5z" fill="#07794C"></path>
-                  </svg>
-                  <p className="mb-0 ms-2">Cleaning: {installation.cleaning}</p>
-                </div>
-                <div className="d-flex justify-content-between align-items-center">
-                  <Button style={{ backgroundColor: '#007bff', borderColor: '#007bff' }} onClick={() => handleAddToCart(installation)}>Add to Cart</Button>
-                  <span className="text-muted">Estimated Time: {installation.time}</span>
+                <div className="card-footer text-center bg-light p-2">
+                  <large className="text-muted">Price: ₹{installation.price}</large>
                 </div>
               </div>
-              <div className="card-footer text-center bg-light p-2">
-            <large className="text-muted">Price: ₹{installation.price}</large>
             </div>
+          ))}
+        </div>
+        <br/>
+    </div>
+    </div>
+
+    <div className='container'>
+      <h2 style={{ fontSize: '2.5rem' }}>Washing Machine Service</h2>
+
+      {/* Repairs Section */}
+      <h3>Repairs</h3>
+      <div className="row">
+        {wrepairs.map((wrepair) => (
+          <div className="col-md-6 mb-4" key={wrepair._id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                <div>
+                  <h5 className="card-title">{wrepair.name}</h5>
+                  <p className="card-text">Type: {wrepair.type}</p>
+                  <p className="card-text">Base Price: ₹{wrepair.price}</p>
+
+                  <div className="form-group">
+                    {wrepair.issues && wrepair.issues.length > 0 ? (
+                      wrepair.issues.map((issue, issueIndex) => (
+                        <div className="form-check" key={issueIndex}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            value={issue}
+                            checked={selectedRepairIssues[wrepair._id]?.includes(issue) || false}
+                            onChange={() => handleRepairCheckboxChange(wrepair._id, issue)}
+                            id={`repair-issue-${wrepair._id}-${issueIndex}`}
+                          />
+                          <label
+                            className={`form-check-label ${selectedRepairIssues[wrepair._id]?.includes(issue) ? 'text-primary' : ''}`}
+                            htmlFor={`repair-issue-${wrepair._id}-${issueIndex}`}
+                          >
+                            {issue}
+                            {selectedRepairIssues[wrepair._id]?.includes(issue) && ' ✅'}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No issues available</p>
+                    )}
+                  </div>
+                </div>
+
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/repair-${wrepair._id}.jpg`}
+                  alt={wrepair.name}
+                  style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                />
+              </div>
+
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(wrepair._id)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {wrepair.time}</span>
+              </div>
+
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">
+                  Total Price: ₹{calculateRepairTotalPrice(wrepair._id)}
+                </large>
+              </div>
             </div>
           </div>
         ))}
-        </div>
-        <br/>
       </div>
+
+      {/* Installations Section */}
+      <h3>Installations</h3>
+      <div className="row">
+        {winstallations.map((winstallation) => (
+          <div className="col-md-6 mb-4" key={winstallation.id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{winstallation.name}</h5>
+                  <p className="card-text">Type: {winstallation.type}</p>
+                  <p className="card-text">Base Price: ₹{winstallation.price}</p>
+                  
+                  <div className="d-flex align-items-center mb-2">
+                    <p className="mb-0 ms-2">Technology: {winstallation.technology}</p>
+                  </div>
+                  <div className="d-flex align-items-center mb-2">
+                    <p className="mb-0 ms-2">Warranty: {winstallation.warranty}</p>
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}${winstallation.image}`} 
+                  alt={winstallation.name}
+                  style={{
+                    height: '250px',
+                    width: '200px',
+                    objectFit: 'cover',
+                    marginLeft: '20px',
+                  }}
+                />
+              </div>
+
+              {/* Add to Cart and Estimated Time */}
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(winstallation.id)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {winstallation.time}</span>
+              </div>
+
+              {/* Price Calculation */}
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">Total Price: ₹{winstallation.price}</large>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Uninstallations Section */}
+      <h3>Uninstallations</h3>
+      <div className="row">
+        {wuninstallations.map((wuninstallation) => (
+          <div className="col-md-6 mb-4" key={wuninstallation.id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{wuninstallation.name}</h5>
+                  <p className="card-text">Type: {wuninstallation.type}</p>
+                  <p className="card-text">Base Price: ₹{wuninstallation.price}</p>
+                  
+                  <div className="d-flex align-items-center mb-2">
+                    <p className="mb-0 ms-2">Technology: {wuninstallation.technology}</p>
+                  </div>
+                  <div className="d-flex align-items-center mb-2">
+                    <p className="mb-0 ms-2">Warranty: {wuninstallation.warranty}</p>
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}${wuninstallation.image}`} 
+                  alt={wuninstallation.name}
+                  style={{
+                    height: '250px',
+                    width: '200px',
+                    objectFit: 'cover',
+                    marginLeft: '20px',
+                  }}
+                />
+              </div>
+
+              {/* Add to Cart and Estimated Time */}
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(wuninstallation.id)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {wuninstallation.time}</span>
+              </div>
+
+              {/* Price Calculation */}
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">Total Price: ₹{wuninstallation.price}</large>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className='container'>
+    <h2 style={{ fontSize: '2.5rem' }}>Refrigerators Service</h2>
+      <h3> Single Door Issues</h3>
+      <div className="row">
+        {singledoors.map((singledoor) => (
+          <div className="col-md-6 mb-4" key={singledoor.id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{singledoor.name}</h5>
+                  <p className="card-text">Type: {singledoor.type}</p>
+                  <p className="card-text">Base Price: ₹{singledoor.price}</p>
+                  <div className="form-group">
+                    {singledoor.doorissues && singledoor.doorissues.length > 0 ? (
+                      singledoor.doorissues.map((issue, issueIndex) => (
+                        <div className="form-check" key={issueIndex}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedSingleDoorIssues[singledoor.id]?.includes(issue) || false}
+                            onChange={() => handleSingleDoorIssueChange(singledoor.id, issue)}
+                            id={`single-door-issue-${singledoor.id}-${issueIndex}`}
+                          />
+                          <label
+                            className={`form-check-label ${selectedSingleDoorIssues[singledoor.id]?.includes(issue) ? 'text-primary' : ''}`}
+                            htmlFor={`single-door-issue-${singledoor.id}-${issueIndex}`}
+                          >
+                            {issue}
+                            {selectedSingleDoorIssues[singledoor.id]?.includes(issue) && ' ✅'}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No issues available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/fridge-${singledoor.id}.jpg`} // Assuming images follow this naming convention
+                  alt={singledoor.name}
+                  style={{
+                    height: '250px',
+                    width: '200px',
+                    objectFit: 'cover',
+                    marginLeft: '20px',
+                  }}
+                />
+              </div>
+
+              {/* Add to Cart and Estimated Time */}
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(singledoor)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {singledoor.time}</span>
+              </div>
+
+              {/* Price Calculation */}
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">
+                  Total Price: ₹{calculateFridgeTotalPrice(singledoor.id)}
+                </large>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <h3> Double Door Issues</h3>
+      <div className="row">
+        {doubledoors.map((doubledoor) => (
+          <div className="col-md-6 mb-4" key={doubledoor.id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{doubledoor.name}</h5>
+                  <p className="card-text">Type: {doubledoor.type}</p>
+                  <p className="card-text">Base Price: ₹{doubledoor.price}</p>
+                  <div className="form-group">
+                    {doubledoor.doorissues && doubledoor.doorissues.length > 0 ? (
+                      doubledoor.doorissues.map((issue, issueIndex) => (
+                        <div className="form-check" key={issueIndex}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) || false}
+                            onChange={() => handleDoubleDoorIssueChange(doubledoor.id, issue)}
+                            id={`double-door-issue-${doubledoor.id}-${issueIndex}`}
+                          />
+                          <label
+                            className={`form-check-label ${selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) ? 'text-primary' : ''}`}
+                            htmlFor={`double-door-issue-${doubledoor.id}-${issueIndex}`}
+                          >
+                            {issue}
+                            {selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) && ' ✅'}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No issues available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/fridge-${doubledoor.id}.jpg`} // Assuming images follow this naming convention
+                  alt={doubledoor.name}
+                  style={{
+                    height: '250px',
+                    width: '200px',
+                    objectFit: 'cover',
+                    marginLeft: '20px',
+                  }}
+                />
+              </div>
+
+              {/* Add to Cart and Estimated Time */}
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(doubledoor)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {doubledoor.time}</span>
+              </div>
+
+              {/* Price Calculation */}
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">
+                  Total Price: ₹{calculateDoubleDoorTotalPrice(doubledoor.id)}
+                </large>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <h3> Side-by-side Door Issues</h3>
+      <div className="row">
+        {sidebysidedoors.map((sidebysidedoor) => (
+          <div className="col-md-6 mb-4" key={sidebysidedoor.id}>
+            <div className="card h-100">
+              <div className="card-body d-flex align-items-center justify-content-between">
+                {/* Text Section */}
+                <div>
+                  <h5 className="card-title">{sidebysidedoor.name}</h5>
+                  <p className="card-text">Type: {sidebysidedoor.type}</p>
+                  <p className="card-text">Base Price: ₹{sidebysidedoor.price}</p>
+                  <div className="form-group">
+                    {sidebysidedoor.doorissues && sidebysidedoor.doorissues.length > 0 ? (
+                      sidebysidedoor.doorissues.map((issue, issueIndex) => (
+                        <div className="form-check" key={issueIndex}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) || false}
+                            onChange={() => handleSideBySideDoorIssueChange(sidebysidedoor.id, issue)}
+                            id={`sidebyside-door-issue-${sidebysidedoor.id}-${issueIndex}`}
+                          />
+                          <label
+                            className={`form-check-label ${selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) ? 'text-primary' : ''}`}
+                            htmlFor={`sidebyside-door-issue-${sidebysidedoor.id}-${issueIndex}`}
+                          >
+                            {issue}
+                            {selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) && ' ✅'}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No issues available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/fridge-${sidebysidedoor.id}.jpg`} // Assuming images follow this naming convention
+                  alt={sidebysidedoor.name}
+                  style={{
+                    height: '250px',
+                    width: '200px',
+                    objectFit: 'cover',
+                    marginLeft: '20px',
+                  }}
+                />
+              </div>
+
+              {/* Add to Cart and Estimated Time */}
+              <div className="d-flex justify-content-between align-items-center p-2">
+                <Button
+                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                  onClick={() => handleAddToCart(sidebysidedoor)}
+                >
+                  Add to Cart
+                </Button>
+                <span className="text-muted">Estimated Time: {sidebysidedoor.time}</span>
+              </div>
+
+              {/* Price Calculation */}
+              <div className="card-footer text-center bg-light p-2">
+                <large className="text-muted">
+                  Total Price: ₹{calculateSideBySideTotalPrice(sidebysidedoor.id)}
+                </large>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    
     </div>
 
     {/* WhatsApp */}
@@ -904,7 +1576,7 @@ const handleLogout = () => {
           target="_blank"
           rel="noopener noreferrer"
           className="whatsapp-icon btn btn-success rounded-circle">
-          <i className="fab fa-whatsapp fa-2x"></i>
+          <i className="fab fa-whatsapp fa-4x"></i>
         </a>
       {/* )} */}
     </div>
@@ -918,22 +1590,22 @@ const handleLogout = () => {
           target="_blank"
           className="phone-icon btn btn-success rounded-circle"
         >
-          <i className="fas fa-phone fa-2x"></i>
+          <i className="fas fa-phone fa-4x"></i>
         </a>
       {/* )} */}
     </div>
 
     {/* chat Bot*/}
-    <div>
+    {/* <div> */}
       {/* {isVisible && ( */}
-        <a
+        {/* <a
           target="_blank"
           className="chatbot-icon btn btn-primary rounded-circle"
         >
           <i className="fa-solid fa-comment fa-2x"></i>
-        </a>
+        </a> */}
       {/* )} */}
-    </div>
+    {/* </div> */}
 
     {/* <div>
       <button
@@ -1069,8 +1741,8 @@ const handleLogout = () => {
       </div>
       
       <div className="container mt-5">
-      <h4 className="text-center mb-5">Why Choose NR Agencies For Your AC Service And Repair Needs Near Me?</h4>
-      <p className="text-center mb-4">Are you tired of searching for 'ac repair services near me' or 'split ac service near me' and ending up with more confusion than solutions? Look no further – NR Agencies Company is here to redefine your AC service experience near your area. Wondering what sets us apart? Let's dive into the reasons why choosing NR Agencies Company is the smart choice for all your AC needs.</p>
+      <h4 className="text-center mb-5">Why Choose Sree Teq For Your AC Service And Repair Needs Near Me?</h4>
+      <p className="text-center mb-4">Are you tired of searching for 'ac repair services near me' or 'split ac service near me' and ending up with more confusion than solutions? Look no further – Sree Teq Company is here to redefine your AC service experience near your area. Wondering what sets us apart? Let's dive into the reasons why choosing Sree Teq Company is the smart choice for all your AC needs.</p>
       <div className="row">
         {content1.map((item, index) => (
           <div className="col-md-4 mb-2" key={index}>
@@ -1083,19 +1755,19 @@ const handleLogout = () => {
           </div>
         ))}
       </div>
-      </div>How To Book Your AC Service & Repair Services With NR Agencies Near Me?
+      </div>How To Book Your AC Service & Repair Services With Sree Teq Near Me?
 
       <div className="container mt-5">
-        <h4 className="text-center mb-4">How To Book Your AC Service & Repair Services With NR Agencies Near Me?</h4>
-        <p className="text-center mb-5">Welcome to the seamless world of NR Agencies's AC service & repair services! Book us now for a perfect AC service, AC repair, gas filling, AC installation and AC uninstallation near you.</p>
+        <h4 className="text-center mb-4">How To Book Your AC Service & Repair Services With Sree Teq Near Me?</h4>
+        <p className="text-center mb-5">Welcome to the seamless world of Sree Teq's AC service & repair services! Book us now for a perfect AC service, AC repair, gas filling, AC installation and AC uninstallation near you.</p>
 
         <div className="row">
           <div className="col-md-6">
             <img src={require("assets/img/userDB/7.jpg")} alt="AC Service & Repair" className="img-fluid" />
           </div>
           <div className="col-md-6">
-            <h6>Step 1: Visit NR Agencies App or Website</h6>
-            <p>To embark on your AC service journey, simply open the NR Agencies app or visit our website.</p>
+            <h6>Step 1: Visit Sree Teq App or Website</h6>
+            <p>To embark on your AC service journey, simply open the Sree Teq app or visit our website.</p>
             <p>Choose the ‘AC service & repair’ section to explore a plethora of services acclimatized just for you.</p>
 
             <h6>Step 2: Select Your Desired Service and Time Slot</h6>
@@ -1109,7 +1781,7 @@ const handleLogout = () => {
 
             <h6>Step 4: Automatic Professional Assignment</h6>
             <p>Our advanced algorithms ensure that you get the best-suited professional for your chosen service based on availability, experience, conditions and ratings.</p>
-            <p>NR Agencies takes the matchmaking out of opting a professed and secure professional.</p>
+            <p>Sree Teq takes the matchmaking out of opting a professed and secure professional.</p>
           </div>
         </div>
 {/* change DONE*/}
@@ -1124,9 +1796,9 @@ const handleLogout = () => {
       </div>
 {/* change DONE*/}
       <Container className="mt-5">
-      <h4 style={{ textAlign: 'center' }}>Find Best AC Service Near Me: The Extreme AC Cleaning Service By NR Agencies</h4>
+      <h4 style={{ textAlign: 'center' }}>Find Best AC Service Near Me: The Extreme AC Cleaning Service By Sree Teq</h4>
       <p>
-        Welcome to the heart of our AC Repair and Service offerings! If you're looking for 'split ac service near me' or 'window ac service near me' or any related inquiry, you've landed in the right place. Our mission is to guarantee your ac works at its top productivity, giving you with cool consolation all through the year. Let's jump into the world of comprehensive ac service Booking with NR Agencies.
+        Welcome to the heart of our AC Repair and Service offerings! If you're looking for 'split ac service near me' or 'window ac service near me' or any related inquiry, you've landed in the right place. Our mission is to guarantee your ac works at its top productivity, giving you with cool consolation all through the year. Let's jump into the world of comprehensive ac service Booking with Sree Teq.
       </p>
 {/* change DONE*/}
       <Row className="mt-4">
@@ -1202,19 +1874,19 @@ const handleLogout = () => {
           </p>
           <h4 style={{ fontSize: 'medium', fontWeight : '500' }}>Details Matter</h4>
           <p>
-            We know how vital great consideration to detail is. At NR Agencies, exhaustiveness guides each repair service. Earlier checks open total understanding of the ac. At that point an master eye checks each portion and work after benefit. Unwind as a 30-day guarantee guarantees stress-free unwavering quality distant past our visit.
+            We know how vital great consideration to detail is. At Sree Teq, exhaustiveness guides each repair service. Earlier checks open total understanding of the ac. At that point an master eye checks each portion and work after benefit. Unwind as a 30-day guarantee guarantees stress-free unwavering quality distant past our visit.
           </p>
         </Col>
       </Row>
 
       <Row className="mt-4">
         <Col>
-          <h4 style={{ fontSize: 'medium', fontWeight : '500' }}>Unlock Top-Notch AC Repair Administrations Near You With NR Agencies</h4>
+          <h4 style={{ fontSize: 'medium', fontWeight : '500' }}>Unlock Top-Notch AC Repair Administrations Near You With Sree Teq</h4>
           <p>
-            Air conditioner issues? No stresses! NR Agencies’s talented experts provide stellar AC repair administrations. With broad preparing and a long time of mastery, they prioritize your consolation and fulfillment. Their fastidious approach guarantees a consistent experience.
+            Air conditioner issues? No stresses! Sree Teq’s talented experts provide stellar AC repair administrations. With broad preparing and a long time of mastery, they prioritize your consolation and fulfillment. Their fastidious approach guarantees a consistent experience.
           </p>
           <p>
-            Don’t fuss almost AC repair complexities. NR Agencies’s extraordinary service has got you secured. Depend your cooling companion to their competent hands. Encounter unparalleled unwavering quality and productivity nowadays. Appreciate a reviving breeze of comfort and peace of mind.
+            Don’t fuss almost AC repair complexities. Sree Teq’s extraordinary service has got you secured. Depend your cooling companion to their competent hands. Encounter unparalleled unwavering quality and productivity nowadays. Appreciate a reviving breeze of comfort and peace of mind.
           </p>
         </Col>
       </Row>
@@ -1257,7 +1929,7 @@ const handleLogout = () => {
 
       <Row className="mt-4">
         <Col>
-          <h4 >Why NR Agencies Gives The Best AC Gas Refill Near Me?</h4>
+          <h4 >Why Sree Teq Gives The Best AC Gas Refill Near Me?</h4>
           <ul>
             <li>
               <strong>Expert Technicians:</strong> Our technicians are profoundly prepared and experienced in dealing with all sorts of ac frameworks, guaranteeing a proficient and solid service each time.
@@ -1266,7 +1938,7 @@ const handleLogout = () => {
               <strong>30 Day Guarantee:</strong> We stand behind the quality of our work. That’s why we offer a 30-day guarantee on our ac gas refill service, giving you peace of mind.
             </li>
             <li>
-              <strong>Safety To begin with:</strong> With NR Agencies, you can believe that security is our best need. From foundation verified technicians to taking after strict SOPs for security and cleanliness, we guarantee a secure and secure benefit experience.
+              <strong>Safety To begin with:</strong> With Sree Teq, you can believe that security is our best need. From foundation verified technicians to taking after strict SOPs for security and cleanliness, we guarantee a secure and secure benefit experience.
             </li>
             <li>
               <strong>Eco Friendly Approach:</strong> We get it the significance of supportability. That’s why we utilize eco-friendly and non-toxic items in all our administrations, guaranteeing a secure environment for your family and pets.
@@ -1276,7 +1948,7 @@ const handleLogout = () => {
             </li>
           </ul>
           <p>
-            When it comes to ac gas refill close you, NR Agencies is your trusted partner. With our master technicians, straightforward estimating, and commitment to quality, you can rest guaranteed that your ac unit is in great hands. So why hold up? Book your ac gas refill with us nowadays and appreciate the cool consolation of your domestic or office all year round!
+            When it comes to ac gas refill close you, Sree Teq is your trusted partner. With our master technicians, straightforward estimating, and commitment to quality, you can rest guaranteed that your ac unit is in great hands. So why hold up? Book your ac gas refill with us nowadays and appreciate the cool consolation of your domestic or office all year round!
           </p>
           <p><strong>Don’t let a flawed ac destroy your consolation. Book your ac gas refill benefit with NR Organizations now!</strong></p>
         </Col>
@@ -1286,7 +1958,7 @@ const handleLogout = () => {
       <Container className="mt-5">
       <h2 className="text-center">AC Installation & Uninstallation Near Me</h2>
       <p className="text-center">
-        Welcome to the hassle-free world of ac installation and uninstallation with NR Agencies! Whether you're looking to beat the warm with a brand modern ac installation or offering goodbye to your ancient unit with our consistent uninstallation service, we've got you secured. Let's jump into the points of interest of how our administrations like ac installation and ac uninstallation near you can make your life easier.
+        Welcome to the hassle-free world of ac installation and uninstallation with Sree Teq! Whether you're looking to beat the warm with a brand modern ac installation or offering goodbye to your ancient unit with our consistent uninstallation service, we've got you secured. Let's jump into the points of interest of how our administrations like ac installation and ac uninstallation near you can make your life easier.
         <br/>
         If you are looking for "ac installation service near me" or "part ac installation near me", See no further
       </p>
@@ -1332,9 +2004,9 @@ const handleLogout = () => {
 
       <Row className="mt-4">
         <Col>
-          <h4 className="text-center">Choose NR Agencies For AC Installation & Uninstallation, Select Top-Notch Experience</h4>
+          <h4 className="text-center">Choose Sree Teq For AC Installation & Uninstallation, Select Top-Notch Experience</h4>
           <p>
-            At NR Agencies, we prioritize the significance of a legitimately introduced ac for your consolation and comfort. With our ac establishment and uninstallation administrations, you can rest guaranteed knowing that your cooling needs are in secure hands. Book your benefit nowadays and involvement the contrast for yourself!
+            At Sree Teq, we prioritize the significance of a legitimately introduced ac for your consolation and comfort. With our ac establishment and uninstallation administrations, you can rest guaranteed knowing that your cooling needs are in secure hands. Book your benefit nowadays and involvement the contrast for yourself!
           </p>
         </Col>
       </Row>
@@ -1343,7 +2015,7 @@ const handleLogout = () => {
       <Container>
       <Row className="mt-5">
         <Col md="12">
-          <h4 className="text-center">Know More In Profundity Almost AC Administrations And Repair Administrations By NR Agencies Near Me</h4>
+          <h4 className="text-center">Know More In Profundity Almost AC Administrations And Repair Administrations By Sree Teq Near Me</h4>
         </Col>
       </Row>
       <Row className="mt-5">
@@ -1366,7 +2038,7 @@ const handleLogout = () => {
             <CardBody>
               <CardTitle tag="h5">Power Jet Part AC Service</CardTitle>
               <CardText>
-                Seeking an improved cooling execution for your AC? NR Agencies Powerlet adjusting is your reply. We offer an strongly cleaning of the indoor unit and fundamental cleaning of the open air unit, guaranteeing your AC works at its best.
+                Seeking an improved cooling execution for your AC? Sree Teq Powerlet adjusting is your reply. We offer an strongly cleaning of the indoor unit and fundamental cleaning of the open air unit, guaranteeing your AC works at its best.
               </CardText>
               <ul>
                 <li>AC Cleaning: Profound cleaning of channels, coil, blades, and deplete plate with the powerjet.</li>
@@ -1398,7 +2070,7 @@ const handleLogout = () => {
             <CardBody>
               <CardTitle tag="h5">Foam & Power Jet Window AC Service</CardTitle>
               <CardText>
-                Discover the greatness of NR Agencies Foam + Powerlet innovation for your window AC. For AC service near me, experience 2X more profound dust removal.
+                Discover the greatness of Sree Teq Foam + Powerlet innovation for your window AC. For AC service near me, experience 2X more profound dust removal.
               </CardText>
               <ul>
                 <li>Pre-service checks: Point by point inspection, counting gas checks, to recognize repairs</li>
@@ -1413,7 +2085,7 @@ const handleLogout = () => {
             <CardBody>
               <CardTitle tag="h5">Anti-rust Profound Clean AC Service</CardTitle>
               <CardText>
-                Prevent frequent gas leakages with our unique anti-rust formula, applicable to both split and window ACs. Enjoy a 30 days warranty for reliable AC repair near me with NR Agencies.
+                Prevent frequent gas leakages with our unique anti-rust formula, applicable to both split and window ACs. Enjoy a 30 days warranty for reliable AC repair near me with Sree Teq.
               </CardText>
             </CardBody>
           </Card>
@@ -1444,7 +2116,7 @@ const handleLogout = () => {
             <CardBody>
               <CardTitle tag="h5">Foam & Power Jet AC Service (Split AC)</CardTitle>
               <CardText>
-                Looking for solid AC service near me? NR Agencies Foam + Powerlet innovation offers an unparalleled encounter, giving 2X more profound clean evacuation. We ensure an seriously cleaning of both indoor and open air units, going beyond the surface to provide your AC the treatment it deserves.
+                Looking for solid AC service near me? Sree Teq Foam + Powerlet innovation offers an unparalleled encounter, giving 2X more profound clean evacuation. We ensure an seriously cleaning of both indoor and open air units, going beyond the surface to provide your AC the treatment it deserves.
               </CardText>
               <ul>
                 <li>Indoor unit cleaning: Profound cleaning of channels, coil, blades, and deplete plate with foam and powerjet.</li>
@@ -1461,13 +2133,13 @@ const handleLogout = () => {
             <CardBody>
               <CardTitle tag="h5">Service Comparison from other competitors</CardTitle>
               <ul>
-                <li>Internal Parts Cleaning: NR Agencies guarantees the cleaning of all inside parts, a include uncertain in others services.</li>
+                <li>Internal Parts Cleaning: Sree Teq guarantees the cleaning of all inside parts, a include uncertain in others services.</li>
                 <li>Cleaning Instruments: We utilize foam cleaning & powerjet, setting us separated from manual cleaning with brush & water.</li>
-                <li>Warranty: Appreciate a 30-day guarantee with NR Agencies, a advantage others may not provide</li>
-                <li>Impact on cooling coil: NR Agencies guarantees no affect on the cooling coil, not at all like others who utilize brush cleaning, expanding the chances of coil bending.</li>
-                <li>Expected life: NR Agencies: 2-3 years, Others 1-3 months.</li>
-                <li>AC power consumption: Low after NR Agencies service, high after others services.</li>
-                <li>Gas Spill Recognizable proof & Spill Settling: NR Agencies gives this benefit whereas others don't.</li>
+                <li>Warranty: Appreciate a 30-day guarantee with Sree Teq, a advantage others may not provide</li>
+                <li>Impact on cooling coil: Sree Teq guarantees no affect on the cooling coil, not at all like others who utilize brush cleaning, expanding the chances of coil bending.</li>
+                <li>Expected life: Sree Teq: 2-3 years, Others 1-3 months.</li>
+                <li>AC power consumption: Low after Sree Teq service, high after others services.</li>
+                <li>Gas Spill Recognizable proof & Spill Settling: Sree Teq gives this benefit whereas others don't.</li>
               </ul>
             </CardBody>
           </Card>
@@ -1476,7 +2148,7 @@ const handleLogout = () => {
       </Container>
 {/* change DONE*/}
       <Container className="mt-5">
-      <h4 className="text-center mb-4">Know More In Depth About AC Services And Repair Services By NR Agencies Near Me</h4>
+      <h4 className="text-center mb-4">Know More In Depth About AC Services And Repair Services By Sree Teq Near Me</h4>
       <Row className="justify-content-center">
         <Col md={6}>
           <Card className="mb-4">
@@ -1494,7 +2166,7 @@ const handleLogout = () => {
           <Card className="mb-4">
             <Card.Header style={{ backgroundColor: '#007bff', borderColor: '#007bff', padding:'10px', textAlign:'center' }}>Anti-rust Profound Clean AC Service</Card.Header>
             <Card.Body>
-              <p>Prevent frequent gas spillages with our interesting anti-rust equation, appropriate to both split and window ACs. Enjoy a 30 days guarantee for solid AC repair near me with NR Agencies.</p>
+              <p>Prevent frequent gas spillages with our interesting anti-rust equation, appropriate to both split and window ACs. Enjoy a 30 days guarantee for solid AC repair near me with Sree Teq.</p>
             </Card.Body>
           </Card>
         </Col>
@@ -1504,7 +2176,7 @@ const handleLogout = () => {
           <Card className="mb-4">
             <Card.Header style={{ backgroundColor: '#007bff', borderColor: '#007bff', padding:'10px', textAlign:'center' }}>Power Jet Split AC Service</Card.Header>
             <Card.Body>
-              <p>Seeking an upgraded cooling execution for your AC? NR Agencies Powerlet adjusting is your reply. We offer an strongly cleaning of the indoor unit and fundamental cleaning of the open air unit, guaranteeing your AC works at its best.</p>
+              <p>Seeking an upgraded cooling execution for your AC? Sree Teq Powerlet adjusting is your reply. We offer an strongly cleaning of the indoor unit and fundamental cleaning of the open air unit, guaranteeing your AC works at its best.</p>
               <ul>
                 <li>AAC cleaning: Profound cleaning of channels, coil, blades, and drain plate with the powerjet.</li>
                 <li>Pre-service checks: Point by point review, counting gas checks, to recognize repairs.</li>
@@ -1517,7 +2189,7 @@ const handleLogout = () => {
           <Card className="mb-4">
             <Card.Header style={{ backgroundColor: '#007bff', borderColor: '#007bff', padding:'10px', textAlign:'center' }}>AC Repair (Split/Window)</Card.Header>
             <Card.Body>
-              <p>For a point by point issue conclusion and same-day determination, NR Agencies AC repair services near me have you secured. Whether it's less/no cooling, control on issues, undesirable noise/smell, or water spillage, we give a 30 days guarantee for all repairs.</p>
+              <p>For a point by point issue conclusion and same-day determination, Sree Teq AC repair services near me have you secured. Whether it's less/no cooling, control on issues, undesirable noise/smell, or water spillage, we give a 30 days guarantee for all repairs.</p>
             </Card.Body>
           </Card>
         </Col>
@@ -1541,7 +2213,7 @@ const handleLogout = () => {
           <Card className="mb-4">
             <Card.Header style={{ backgroundColor: '#007bff', borderColor: '#007bff', padding:'10px', textAlign:'center' }}>Foam & Power Jet Window AC Service</Card.Header>
             <Card.Body>
-              <p>Discover the excellence of NR Agencies Foam + Powerlet innovation for your window AC. For AC service near me, encounter 2X more profound clean removal.</p>
+              <p>Discover the excellence of Sree Teq Foam + Powerlet innovation for your window AC. For AC service near me, encounter 2X more profound clean removal.</p>
               <ul>
                 <li>Pre-service checks: Point by point review, counting gas checks, to recognize repairs</li>
                 <li>AC cleaning: Profound cleaning of channels, coil, blades, and drain plate with froth and powerjet.</li>
@@ -1573,22 +2245,22 @@ const handleLogout = () => {
         </li>
       </ul>
 
-      <h4 className="mb-3">Why NR Agencies AC Service And Repair?</h4>
+      <h4 className="mb-3">Why Sree Teq AC Service And Repair?</h4>
       <ul className="list-group mb-4">
         <li className="list-group-item">
           <strong>Customer Centric:</strong> All our services are curated keeping our clients in intellect and AC repair service is no exception.
         </li>
         <li className="list-group-item">
-          <strong>Customer Security:</strong> Not at all like any other service supplier, NR Agencies gives a client security of Rs. 10,000 against damages.
+          <strong>Customer Security:</strong> Not at all like any other service supplier, Sree Teq gives a client security of Rs. 10,000 against damages.
         </li>
         <li className="list-group-item">
-          <strong>Verified Experts:</strong> All the experts on board with NR Agencies are taken through a screening process to check for their expertise.
+          <strong>Verified Experts:</strong> All the experts on board with Sree Teq are taken through a screening process to check for their expertise.
         </li>
         <li className="list-group-item">
           <strong>Standardized estimating:</strong> To spare our clients from unjustifiable estimating, we have come up with the thought of standardized estimating with the rate card shared on both our website and App.
         </li>
         <li className="list-group-item">
-          <strong>Service Guarantee:</strong> We at NR Agencies take full ownership of our services and consequently, this is the reason that we give a service guarantee of 30 days.
+          <strong>Service Guarantee:</strong> We at Sree Teq take full ownership of our services and consequently, this is the reason that we give a service guarantee of 30 days.
         </li>
         <li className="list-group-item">
           <strong>Online payment:</strong> Presently pay bother free post your benefit through our online entry. You will get a interface through SMS and/or e-mail which will take you to the online payment portal.
@@ -1599,12 +2271,12 @@ const handleLogout = () => {
         Like any other machinery, an machine such as ac needs to be kept up and looked after for its healthy working. Consequently, 
         the machine should get a appropriate service before the begin of summer season. After all, nothing can be more awful than a broken or defective ac. 
         Chasing a service staff for ac repair in the sultry climate can be a bother. You can now book a proficient either for service and repair inside minutes from your domestic. 
-        You do not indeed require to clear your plan as you can select your alluring time space. NR Agencies ac repair service has proven to be a blessing for our clients as we proceed to get cheerful tributes and appraisals from our customers.
+        You do not indeed require to clear your plan as you can select your alluring time space. Sree Teq ac repair service has proven to be a blessing for our clients as we proceed to get cheerful tributes and appraisals from our customers.
       </p>
 
       <h4 className="mb-3">How it works?</h4>
       <p className="mb-4">
-        To discover the best experts near you in no time, you just require to go on the NR Agencies website or App and search for 'AC Repair' in the search tab. 
+        To discover the best experts near you in no time, you just require to go on the Sree Teq website or App and search for 'AC Repair' in the search tab. 
         A pop up tab will open up wherein you will require to fill in the details agreeing to your requirements. Questions such as what kind of service is required - split ac or window ac,
         area, time, etc. compromise the survey. Once your request is transferred on the entry, a proficient will be at your doorstep at your asked time and area.
       </p>
@@ -1620,11 +2292,9 @@ const handleLogout = () => {
           {error && <div>{error}</div>}
           <form>
             <p>UserID: {personalDetails.userid}</p>
-            <p>First Name: {personalDetails.firstName}</p>
-            <p>Last Name: {personalDetails.lastName}</p>
+            <p>Name: {personalDetails.Name}</p>
             <p>Mobile Number: {personalDetails.mobileNumber}</p>
             <p>Email: {personalDetails.email}</p>
-            <p>Date of Birth: {personalDetails.dateOfBirth}</p>
           </form>
         </Modal.Body>
         <Modal.Footer>
@@ -1676,7 +2346,7 @@ const handleLogout = () => {
         </div>
       </div>
       <div className="text-center mt-3">
-        <p className="mb-0">© Copyright 2024 NR Agencies. All rights reserved. | CIN: U74140DL2014PTC274413</p>
+        <p className="mb-0">© Copyright 2024 Sree Teq. All rights reserved. | CIN: U74140DL2014PTC274413</p>
       </div>
       </footer>
 

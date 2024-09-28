@@ -66,7 +66,7 @@ function ProfilePage() {
             </div>
             <h3 className="title">About me</h3>
             <h5 className="description">
-              At NR Agencies, we pride ourselves on being the go-to service
+              At Sree Teq, we pride ourselves on being the go-to service
               provider for all your air conditioning and washing machine repair
               needs. With years of experience in the industry, our mission is to
               deliver reliable, efficient, and affordable repair services to

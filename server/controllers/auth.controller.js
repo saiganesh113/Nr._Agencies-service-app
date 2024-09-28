@@ -11,10 +11,10 @@ const generateToken = (id) => {
 // Register Technician
 export const registerTechnician = async (req, res) => {
   try {
-    const { techid, Name, email, phone, adharnumber, pancard, password } = req.body;
+    const { techid, Name, email, phone, adharnumber, password } = req.body;
 
     // Validate input
-    if (!techid || !Name || !email || !phone || !adharnumber || !pancard || !password) {
+    if (!techid || !Name || !email || !phone || !adharnumber|| !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -34,7 +34,6 @@ export const registerTechnician = async (req, res) => {
       email,
       phone,
       adharnumber,
-      pancard,
       password: hashedPassword,
     });
 
@@ -65,11 +64,11 @@ export const registerTechnician = async (req, res) => {
 // Register User
 export const registerUser = async (req, res) => {
   try {
-    const { userid, firstName, lastName, email, phone, dateofbirth, password } = req.body;
+    const { userid, Name, email, phone, password } = req.body;
 
-    if (!userid || !firstName || !lastName || !email || !phone || !dateofbirth || !password) {
+    if (!userid || !Name || !email || !phone || !password) {
       return res.status(400).json({ message: 'All fields are required' });
-    }
+  }  
 
     const existingUser = await User.findOne({ userid });
     if (existingUser) {
@@ -80,11 +79,9 @@ export const registerUser = async (req, res) => {
 
     const newUser = new User({
       userid,
-      firstName,
-      lastName,
+      Name,
       email,
       phone,
-      dateofbirth,
       password: hashedPassword,
     });
 

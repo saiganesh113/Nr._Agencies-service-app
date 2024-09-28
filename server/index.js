@@ -15,15 +15,14 @@ import repairRoutes from './routes/repair.route.js';
 import installationRoutes from './routes/installation.route.js';
 import cartRoutes from './routes/cart.route.js';
 import paymentRoutes from './routes/payment.route.js';
+import washingMachineRepairRoutes from './routes/washingMachineRepair.route.js';
+import washingMachineInstallationRoutes from './routes/washingMachineInstallation.route.js';
+import washingMachineUninstallationRoutes from './routes/washingMachineUninstallation.route.js'
 
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: 'http://localhost:3000', // Adjust to your frontend URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true,
-}));
+app.use(cors());
 app.use(helmet()); // Secure HTTP headers
 app.use(bodyParser.json({ limit: '20mb' })); // Parse incoming JSON requests
 app.use(bodyParser.urlencoded({ limit: '20mb', extended: true })); // Parse URL-encoded data
@@ -37,6 +36,9 @@ app.use('/api/repairs', repairRoutes);
 app.use('/api/installations', installationRoutes);
 app.use('/api/carts', cartRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/wrepairs', washingMachineRepairRoutes);
+app.use('/api/winstallations', washingMachineInstallationRoutes);
+app.use('/api/wuninstallations', washingMachineUninstallationRoutes);
 
 // Notifications route (for example)
 app.get('/api/notifications', (req, res) => {
@@ -48,6 +50,10 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'Healthy' });
 });
 
+app.get('/', (req, res) => {
+  res.status(200).json([{ message: 'Server is running'}]);
+});
+
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -55,10 +61,7 @@ app.use((err, req, res, next) => {
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
 .then(() => {
   console.log('Connected to MongoDB successfully');
   app.listen(process.env.PORT || 5000, () => {

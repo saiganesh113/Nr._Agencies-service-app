@@ -3,21 +3,30 @@ import Cart from '../models/cart.model.js';
 // Add an item to the cart
 export const addToCart = async (req, res) => {
   try {
-    console.log('Request body:', req.body); // Log the incoming request body
-
     const { userid, type, price, discount, estimatedTime, image, name, reviews, slotBookedDate, slotBookedTime, technology, time, totalPrice, warranty, address } = req.body;
 
-    // Basic validation
+    // Convert strings to numbers for price, discount, and totalPrice
+    const parsedPrice = parseFloat(price) || 0;
+    const parsedDiscount = parseFloat(discount) || 0;
+    const parsedTotalPrice = parsedPrice - parsedDiscount;
+
+    // Validation
     if (!userid || !type || !price || !address) {
       return res.status(400).json({ error: 'Userid, type, price, and address are required' });
     }
 
-    // Create the new cart item
+    // Check if the item already exists in the cart
+    const existingItem = await Cart.findOne({ userid, type, name, slotBookedDate, slotBookedTime });
+    if (existingItem) {
+      return res.status(400).json({ error: 'This item is already in the cart for the selected time slot.' });
+    }
+
+    // Create a new cart item
     const newItem = new Cart({
       userid,
       type,
-      price,
-      discount,
+      price: parsedPrice,
+      discount: parsedDiscount,
       estimatedTime,
       image,
       name,
@@ -26,7 +35,7 @@ export const addToCart = async (req, res) => {
       slotBookedTime,
       technology,
       time,
-      totalPrice,
+      totalPrice: parsedTotalPrice,
       warranty,
       address
     });
@@ -39,8 +48,8 @@ export const addToCart = async (req, res) => {
   }
 };
 
+
 // Get all cart items for a specific user by user ID
-// src/controllers/cart.controller.js
 export const getCartItemsByUserId = async (req, res) => {
   try {
     const { userid } = req.params;
@@ -50,7 +59,12 @@ export const getCartItemsByUserId = async (req, res) => {
       return res.status(400).json({ error: 'User ID is required to fetch cart items' });
     }
 
-    const cartItems = await Cart.find({ userid });
+    // Pagination support (optional)
+    const { page = 1, limit = 20 } = req.query; // Default to page 1 with 10 items per page
+    const cartItems = await Cart.find({ userid })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
     console.log('Fetched cart items:', cartItems); // Log fetched items
 
     res.status(200).json(cartItems);
@@ -63,7 +77,12 @@ export const getCartItemsByUserId = async (req, res) => {
 // Get all cart items
 export const getAllCartItems = async (req, res) => {
   try {
-    const cartItems = await Cart.find(); // Fetch all cart items
+    // Pagination support (optional)
+    const { page = 1, limit = 20 } = req.query; // Default to page 1 with 10 items per page
+    const cartItems = await Cart.find()
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
     res.status(200).json(cartItems);
   } catch (error) {
     console.error('Error fetching all cart items:', error);

@@ -4,11 +4,20 @@ const cartSchema = new mongoose.Schema({
   userid: {
     type: String,
     required: true,
-    ref: 'Profile' // Reference the Profile model by username
+    ref: 'Profile'
   },
-  type: String,
-  price: Number,
-  discount: String,
+  type: {
+   type: String,
+   required: true,
+  },
+  price: {
+    type: Number,  // Ensure price is a number
+    required: true
+  },
+  discount: {
+    type: Number,  // Convert discount to a number to avoid issues
+    default: 0
+  },
   estimatedTime: String,
   image: String,
   name: String,
@@ -17,7 +26,10 @@ const cartSchema = new mongoose.Schema({
   slotBookedTime: Date,
   technology: String,
   time: String,
-  totalPrice: Number,
+  totalPrice: {
+    type: Number,  // Ensure totalPrice is a number
+    required: true
+  },
   warranty: String,
   address: {
     type: String,
