@@ -266,61 +266,64 @@ const TechnicianDashboard = ({techid, userId }) => {
       )}
 
       {activeSection === 'orders' && (
-              <Row className="my-3 justify-content-center">
-                {error && <p className="text-danger">{error}</p>}
-                {loading ? (
-                  <p>Loading...</p>
-                ) : orders.length > 0 ? (
-                  orders.map(order => {
-                    const completedStyle = completedOrders.includes(order.transactionId)
-                      ? {
-                          filter: 'blur(2px) brightness(70%)',
-                          opacity: '0.7',
-                          pointerEvents: 'none'
-                        }
-                      : {};
+        <Row className="my-3 justify-content-center">
+          {error && <p className="text-danger">{error}</p>}
+          {loading ? (
+            <p>Loading...</p>
+          ) : orders.length > 0 ? (
+            orders.map(order => {
+              const completedStyle = completedOrders.includes(order.transactionId)
+                ? {
+                    filter: 'blur(2px) brightness(70%)',
+                    opacity: '0.7',
+                    pointerEvents: 'none'
+                  }
+                : {};
 
-                    return (
-                      <Col xs={10} md={5} lg={5} key={order.transactionId} className="mb-3">
-                        <Card style={completedStyle}>
-                          <Card.Body>
-                            <Card.Title>Order ID: {order.transactionId}</Card.Title>
-                            <Card.Text>
-                              <strong>Amount:</strong> ₹{order.amount}
-                              <ul>
-                                {order.cart.map((item, index) => (
-                                  <li key={index}>
-                                    {item.name} - ₹{item.price}
-                                    <div>{item.warranty}</div>
-                                    <div>{item.technology}</div>
-                                    <div>{item.cleaning}</div>
-                                    <div>{item.discount}</div>
-                                    <div>{item.reviews}</div>
-                                  </li>
-                                ))}
-                              </ul>
-                              <strong>Address:</strong> {order.address || 'No address provided'}
-                              <br />
-                            </Card.Text>
-                            {!completedOrders.includes(order.transactionId) && (
-                              <Button onClick={() => handleOrderAction(order.transactionId, 'complete')}>
-                                Mark as Completed
-                              </Button>
-                            )}
-                            <Button onClick={() => handleOrderAction(order.transactionId, 'cancel')}>
-                              Cancel Order
-                            </Button>
-                          </Card.Body>
-                        </Card>
-                      </Col>
-                    );
-                  })
-                ) : (
-                  <p>No orders available.</p>
-                )}
-              </Row>
-            )}
-
+              return (
+                <Col xs={10} md={5} lg={5} key={order.transactionId} className="mb-3">
+                  <Card style={completedStyle}>
+                    <Card.Body>
+                      <Card.Title>Order ID: {order.transactionId}</Card.Title>
+                      <Card.Text>
+                        <strong>Amount:</strong> ₹{order.amount}
+                        <br />
+                        <strong>User ID:</strong> {order.userid || 'Not provided'} <br />{/* Access userId from order object */}
+                        <strong>User Name:</strong> {order.cart[0].username|| 'Not provided'}
+                        <ul>
+                          {order.cart.map((item, index) => (
+                            <li key={index}>
+                              {item.name} - ₹{item.price}
+                              <div>{item.warranty}</div>
+                              <div>{item.technology}</div>
+                              <div>{item.cleaning}</div>
+                              <div>{item.discount}</div>
+                              <div>{item.reviews}</div>
+                            </li>
+                          ))}
+                        </ul>
+                        <strong>Address:</strong> {order.address || 'No address provided'}
+                        <br />
+                        <strong>Mobile Number:</strong> {order.cart[0].mobileNumber || 'Not provided'}
+                      </Card.Text>
+                      {!completedOrders.includes(order.transactionId) && (
+                        <Button onClick={() => handleOrderAction(order.transactionId, 'complete')}>
+                          Mark as Completed
+                        </Button>
+                      )}
+                      <Button onClick={() => handleOrderAction(order.transactionId, 'cancel')}>
+                        Cancel Order
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              );
+            })
+          ) : (
+            <p>No orders available.</p>
+          )}
+        </Row>
+      )}
 
 
       {activeSection === 'schedules' && (

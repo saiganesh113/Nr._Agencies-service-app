@@ -7,15 +7,15 @@ const cartSchema = new mongoose.Schema({
     ref: 'Profile'
   },
   type: {
-   type: String,
-   required: true,
+    type: String,
+    required: true
   },
   price: {
     type: Number,  // Ensure price is a number
     required: true
   },
   discount: {
-    type: Number,  // Convert discount to a number to avoid issues
+    type: Number,  // Convert discount to a number
     default: 0
   },
   estimatedTime: String,
@@ -33,7 +33,7 @@ const cartSchema = new mongoose.Schema({
   warranty: String,
   address: {
     type: String,
-    required: true 
+    required: true  // Ensure address is provided
   }
 }, { timestamps: true });
 

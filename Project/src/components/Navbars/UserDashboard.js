@@ -328,11 +328,12 @@ const handleLogout = () => {
       // Ensure itemTotalPrice is non-negative and properly calculated
       itemTotalPrice = itemTotalPrice > 0 ? itemTotalPrice : currentItem.price || 0;
   
-      // Create the cart item object
+      // Create the cart item object, including name and mobile number
       const cartItem = {
         ...currentItem,
         userid: personalDetails.userid, // Use userid from personalDetails
-        Number: personalDetails.mobileNumber, // Ensure mobile number is pulled correctly
+        username: personalDetails.Name, // Include full name
+        mobileNumber: personalDetails.mobileNumber, // Ensure mobile number is pulled correctly
         slotBookedTime: slotBookedTime.toISOString(),
         slotBookedDate: selectedDate,
         estimatedTime: currentItem.estimatedTime || 'N/A',
@@ -365,6 +366,8 @@ const handleLogout = () => {
       setError('An error occurred while booking the slot. Please try again.');
     }
   };
+  
+  
     
   
   useEffect(() => {
@@ -864,6 +867,16 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
             className="form-control" 
             id="userid" 
             value={personalDetails.userid} // Set user ID from userDetails
+            readOnly // Make it read-only
+          />
+        </div>
+        <div className="mb-3">
+          <label htmlFor="username" className="form-label">User Name</label>
+          <input 
+            type="text" 
+            className="form-control" 
+            id="username" 
+            value={personalDetails.Name} // Set user ID from userDetails
             readOnly // Make it read-only
           />
         </div>

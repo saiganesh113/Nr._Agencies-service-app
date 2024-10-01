@@ -3,9 +3,16 @@ import { addToCart, getCartItemsByUserId, getAllCartItems, removeFromCart } from
 
 const router = express.Router();
 
-router.post('/', addToCart); // Route for adding items to cart
-router.get('/:userid', getCartItemsByUserId); // Route for getting cart items by user ID
-router.get('/', getAllCartItems); // Route for getting all cart items
-router.delete('/:id', removeFromCart); // Route for deleting items from cart
+// Route for adding items to cart
+router.post('/', addToCart);
+
+// Route for getting cart items by user ID
+router.get('/:userid', getCartItemsByUserId);
+
+// Route for getting all cart items
+router.get('/', getAllCartItems);
+
+// Route for deleting items from cart by ID
+router.delete('/:id', removeFromCart);
 
 export default router;
