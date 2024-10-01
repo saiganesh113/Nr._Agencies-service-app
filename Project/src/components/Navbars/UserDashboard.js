@@ -114,7 +114,7 @@ useEffect(() => {
       console.log('Decoded Token:', decodedToken);
 
       // Ensure the token structure matches your backend's expectations
-      if (!decodedToken.id) {
+      if (!decodedToken.userid) {
         throw new Error('Invalid token structure.');
       }
 
@@ -135,7 +135,6 @@ useEffect(() => {
 
         console.log('User Details:', userDetails);
 
-
         setPersonalDetails({
           userid: userDetails.userid || '',
           Name: userDetails.Name || '',
@@ -148,12 +147,11 @@ useEffect(() => {
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
-      setError('Failed to load user data.');
       if (error.response && error.response.status === 401) {
         navigate('/login');
       }
     } finally {
-      setLoading(false);
+      setLoading(false); // Ensure loading state is reset
     }
   };
 

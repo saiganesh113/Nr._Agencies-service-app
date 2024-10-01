@@ -28,7 +28,6 @@ const TechnicianDashboard = ({techid, userId }) => {
     email: '',
     mobileNumber: '',
     aadharNumber: '',
-    panNumber: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -39,50 +38,48 @@ const TechnicianDashboard = ({techid, userId }) => {
     const loadTechnicianData = async () => {
       setLoading(true);
       setError('');
-  
+    
       try {
         const token = localStorage.getItem('tech_token'); // Retrieve token
         const techid = localStorage.getItem('tech_id');   // Retrieve tech_id
         console.log('Fetching technician data with techid:', techid); // Debugging log
-  
+    
         if (!token || !techid) {
-          throw new Error('Token or TechID not found.');
+          throw new Error('Token or TechID not found. Please log in again.');
         }
-  
+    
         const response = await axios.get(`http://localhost:5000/api/auth/technician/${techid}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-  
-        console.log('API response data:', response.data); // Log the response
-  
-        const techDetails = response.data.technician; // Access the nested 'technician' object
-  
+    
+        // Accessing technician object from the response
+        const techDetails = response.data.technician;
+    
         if (!techDetails) {
-          throw new Error('Technician details not available.');
+          throw new Error('Technician details not available in response.');
         }
-  
+    
         // Update the personalDetails state with fetched data
         setPersonalDetails({
           techid: techDetails.techid || '',
-          Name: techDetails.Name || '',
+          Name: techDetails.techName || '',  // Ensure you are using the correct field names
           email: techDetails.email || '',
           mobileNumber: techDetails.phone || '',
           aadharNumber: techDetails.adharnumber || '',
-          panNumber: techDetails.pancard || ''
         });
-  
+    
       } catch (error) {
         console.error('Failed to load technician data:', error);
-        setError('Failed to load technician data.');
+        setError(`Failed to load technician data: ${error.message}`); // More informative error
       } finally {
         setLoading(false);
       }
     };
-  
     // Load technician data on component mount
     loadTechnicianData();
   }, []);
   
+    
 
   const [activeSection, setActiveSection] = useState('dashboard');
 
@@ -393,26 +390,36 @@ const TechnicianDashboard = ({techid, userId }) => {
     </Row>
 
     <Modal show={showModal} onHide={handleCloseModal}>
-      <Modal.Header closeButton>
-        <Modal.Title>Technician Profile</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {loading && <div>Loading...</div>}
-        {error && <div>{error}</div>}
-        <form>
-          <p>TechID: {personalDetails.techid}</p>
-          <p>Name: {personalDetails.Name}</p>
-          <p>Email: {personalDetails.email}</p>
-          <p>Mobile Number: {personalDetails.mobileNumber}</p>
-          <p>Aadhar Number: {personalDetails.aadharNumber}</p>
-          <p>PAN Number: {personalDetails.panNumber}</p>
-        </form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button onClick={handleCloseModal}>Close</Button>
-        <Button onClick={handleLogout}>Logout</Button>
-      </Modal.Footer>
-    </Modal>
+  <Modal.Header closeButton>
+    <Modal.Title>Technician Profile</Modal.Title>
+  </Modal.Header>
+  <Modal.Body>
+    {/* Show loading spinner or message when data is being fetched */}
+    {loading && <div>Loading...</div>}
+    
+    {/* Show error message if any error occurs */}
+    {error && <div className="text-danger">{error}</div>}
+    
+    {/* Technician profile data */}
+    {!loading && !error && (
+      <form>
+        <p><strong>TechID:</strong> {personalDetails.techid}</p>
+        <p><strong>Name:</strong> {personalDetails.Name}</p>
+        <p><strong>Email:</strong> {personalDetails.email}</p>
+        <p><strong>Mobile Number:</strong> {personalDetails.mobileNumber}</p>
+        <p><strong>Aadhar Number:</strong> {personalDetails.aadharNumber}</p>
+      </form>
+    )}
+  </Modal.Body>
+  <Modal.Footer>
+    <Button variant="secondary" onClick={handleCloseModal}>
+      Close
+    </Button>
+    <Button variant="danger" onClick={handleLogout}>
+      Logout
+    </Button>
+  </Modal.Footer>
+</Modal>
 
     </Container>
   );

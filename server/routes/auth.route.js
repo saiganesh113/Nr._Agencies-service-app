@@ -18,8 +18,8 @@ const router = express.Router();
 // Technician routes
 router.post('/register-technician', registerTechnician);
 router.post('/login-technician', loginTechnician);
-router.get('/technician/:techId', protectRoute, getTechnician);
-router.put('/technician/:techId', protectRoute, updateTechnician);
+router.get('/technician/:techid', protectRoute, getTechnician); // Updated here
+router.put('/technician/:techid', protectRoute, updateTechnician); // Updated here
 router.get('/technicians', protectRoute, getAllTechnicians);
 
 // User routes

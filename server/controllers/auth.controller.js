@@ -43,7 +43,7 @@ export const registerTechnician = async (req, res) => {
     await technician.save();
 
     // Generate a JWT token for the technician
-    const token = generateToken(technician._id);
+    const token = jwt.sign({ techid: technician.techid, role: 'technician' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     // Send a success response with the technician's details and token
     res.status(201).json({
@@ -66,108 +66,108 @@ export const registerTechnician = async (req, res) => {
 
 // Register User
 export const registerUser = async (req, res) => {
-  try {
-    const { userid, Name, email, phone, password } = req.body;
+  const { userid, Name, email, phone, password } = req.body;
 
+  try {
+    // Check if all required fields are provided
     if (!userid || !Name || !email || !phone || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
+    // Check for existing user
     const existingUser = await User.findOne({ userid });
     if (existingUser) {
-      return res.status(400).json({ message: 'User ID already registered' });
+      return res.status(400).json({ message: 'User with this User ID already exists' });
     }
 
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({
-      userid,
-      Name,
-      email,
-      phone,
-      password: hashedPassword,
-    });
+    // Create new user
+    const user = new User({ userid, Name, email, phone, password: hashedPassword });
+    
+    // Save user to the database
+    await user.save();
 
-    await newUser.save();
-
-    const token = generateToken(newUser._id);
-
-    res.status(201).json({ message: 'User registered successfully', token });
+    res.status(201).json({ message: 'User registered successfully', user });
   } catch (error) {
-    console.error('Error registering user:', error.message);
+    console.error('Error registering user:', error);
     res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 };
-
 // Login Technician
-export const loginTechnician = async (req, res) => {
+export const loginUser = async (req, res) => {
+  const { userid, password } = req.body;
+
   try {
-    const { techid, password } = req.body;
-
-    if (!techid || !password) {
-      return res.status(400).json({ message: 'Tech ID and password are required' });
+    // Authenticate user and retrieve user data
+    const user = await User.findOne({ userid });
+    
+    // Check if user exists and compare passwords
+    if (!user || !user.comparePassword(password)) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const technician = await Technician.findOne({ techid });
-    if (!technician) {
-      return res.status(401).json({ message: 'Invalid Tech ID or password' });
-    }
+    // Generate a token with user data
+    const token = jwt.sign({ userid: user.userid, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    const isMatch = await bcrypt.compare(password, technician.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid Tech ID or password' });
-    }
-
-    const token = generateToken(technician._id);
-    res.status(200).json({ token, techId: technician.techid });
+    // Send token and user data
+    res.json({ token, user });
   } catch (error) {
-    console.error('Error logging in technician:', error.message);
-    res.status(500).json({ message: 'Server error. Please try again later.' });
+    console.error('Error during user login:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-// Login User
-export const loginUser = async (req, res) => {
+export const loginTechnician = async (req, res) => {
+  const { techid, password } = req.body;
+
   try {
-    const { userid, password } = req.body;
+      // Authenticate technician and retrieve technician data
+      const technician = await Technician.findOne({ techid });
+      if (!technician || !technician.comparePassword(password)) {
+          return res.status(401).json({ message: "Invalid credentials" });
+      }
 
-    if (!userid || !password) {
-      return res.status(400).json({ message: 'User ID and password are required' });
-    }
+      // Generate a token with technician data
+      const token = jwt.sign({ techid: technician.techid, role: 'technician' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    const user = await User.findOne({ userid });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid User ID or password' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid User ID or password' });
-    }
-
-    const token = generateToken(user._id);
-    res.status(200).json({ user, token });
+      // Send token and technician ID
+      res.json({ token, techId: technician.techid });
   } catch (error) {
-    console.error('Error logging in user:', error);
-    res.status(500).json({ message: 'Server error. Please try again later.' });
+      console.error('Error during technician login:', error);
+      res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 // Get Technician by Tech ID
 export const getTechnician = async (req, res) => {
   try {
-    const { techid } = req.params;
-    const technician = await Technician.findOne({ techid });
+    const { techid } = req.params; // Extract techid from request parameters
+    console.log('TechID received:', techid); // Log techid for debugging
+
+    // Use techid to find the technician
+    const technician = await Technician.findOne({ techid }); // Make sure to use techid here
+
     if (!technician) {
       return res.status(404).json({ message: 'Technician not found' });
     }
-    res.status(200).json({ technician });
+
+    // Format the response to include only specific fields
+    const technicianData = {
+      techid: technician.techid,
+      techName: technician.techName,
+      email: technician.email,
+      phone: technician.phone,
+      adharnumber: technician.adharnumber,
+    };
+
+    res.status(200).json({ technician: technicianData });
   } catch (error) {
     console.error('Error getting technician:', error.message);
     res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 };
-
 // Login User
 
 
@@ -210,6 +210,7 @@ export const getUser = async (req, res) => {
     }
     res.status(200).json(user);
   } catch (error) {
+    console.error('Error fetching user:', error); // Log the error
     res.status(500).json({ message: 'Server error' });
   }
 };

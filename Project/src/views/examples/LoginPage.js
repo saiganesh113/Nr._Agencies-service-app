@@ -86,7 +86,7 @@ function LoginPage() {
 
             // Clear any previously stored values that are not relevant to the current role
             if (role === "user") {
-                localStorage.removeItem("tech_id");
+                localStorage.removeItem("tech_Id");
             } else {
                 localStorage.removeItem("user_id");
             }

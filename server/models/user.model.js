@@ -1,5 +1,5 @@
-// In user.model.js
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt'; // Ensure bcrypt is imported
 
 const userSchema = new mongoose.Schema({
   userid: { type: String, required: true, unique: true },
@@ -9,6 +9,13 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true }
 });
 
+// Method to compare passwords
+userSchema.methods.comparePassword = function(candidatePassword) {
+  return bcrypt.compareSync(candidatePassword, this.password);
+};
+
 const User = mongoose.model('User', userSchema);
 
 export default User;
+
+// Login function should be in the controller, not in the model.
