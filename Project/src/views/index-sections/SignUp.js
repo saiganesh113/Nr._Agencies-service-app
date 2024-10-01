@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import { useNavigate } from "react-router-dom";
-import { Link} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -28,8 +27,6 @@ function SignUp() {
     phone: "",
     password: "",
     confirmPassword: "",
-
-    // Technician fields
     techId: "",
     techName: "",
     techEmail: "",
@@ -48,10 +45,11 @@ function SignUp() {
   };
 
   const handleRoleChange = (e) => {
-    setRole(e.target.value);
-    setErrors({}); // Clear errors when switching roles
+    const selectedRole = e.target.value;
+    setRole(selectedRole);
+    setErrors({});
 
-    if (e.target.value === "user") {
+    if (selectedRole === "user") {
       setFormData((prev) => ({
         ...prev,
         techId: "",
@@ -78,7 +76,7 @@ function SignUp() {
   const validateUserForm = () => {
     const newErrors = {};
     if (!formData.userid.trim()) newErrors.userid = "User ID is required.";
-    if (!formData.Name.trim()) newErrors.Name = "name is required.";
+    if (!formData.Name.trim()) newErrors.Name = "Name is required.";
     if (!formData.email) newErrors.email = "Email is required.";
     if (!formData.phone) newErrors.phone = "Phone number is required.";
     if (!formData.password) newErrors.password = "Password is required.";
@@ -100,7 +98,6 @@ function SignUp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const validationErrors = role === "user" ? validateUserForm() : validateTechnicianForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -111,7 +108,7 @@ function SignUp() {
       ? `http://localhost:5000/api/auth/register-user`
       : `http://localhost:5000/api/auth/register-technician`;
 
-    const payload = role === "user" 
+    const payload = role === "user"
       ? {
         userid: formData.userid,
         Name: formData.Name,
@@ -121,11 +118,11 @@ function SignUp() {
       }
       : {
         techid: formData.techId,
-        Name: formData.techName,
-        email: formData.techEmail,
+        techName: formData.techName,
+        email: formData.techEmail, // Match the backend key
         phone: formData.techPhone,
         adharnumber: formData.aadharNumber,
-        password: formData.techPassword,
+        password: formData.techPassword, // Use techPassword for payload
       };
 
     try {
@@ -134,7 +131,7 @@ function SignUp() {
       navigate("/login-page");
     } catch (error) {
       console.error("Error during signup:", error.response?.data?.message || "Signup failed");
-      setErrors({ submit: error.response?.data?.message || "Signup failed" });
+      setErrors({ submit: error.response?.data?.message || "Signup failed. Please try again." });
     }
   };
 
@@ -280,7 +277,7 @@ function SignUp() {
                       </InputGroupAddon>
                       <Input
                         name="techId"
-                        placeholder="Technician ID..."
+                        placeholder="Tech ID..."
                         type="text"
                         onChange={handleChange}
                         value={formData.techId}
@@ -295,7 +292,7 @@ function SignUp() {
                       </InputGroupAddon>
                       <Input
                         name="techName"
-                        placeholder="Technician Name..."
+                        placeholder="Name..."
                         type="text"
                         onChange={handleChange}
                         value={formData.techName}
@@ -310,7 +307,7 @@ function SignUp() {
                       </InputGroupAddon>
                       <Input
                         name="techEmail"
-                        placeholder="Technician Email..."
+                        placeholder="Email..."
                         type="email"
                         onChange={handleChange}
                         value={formData.techEmail}
@@ -335,7 +332,7 @@ function SignUp() {
                     <InputGroup className={"no-border"}>
                       <InputGroupAddon addonType="prepend">
                         <InputGroupText>
-                          <i className="now-ui-icons business_badge"></i>
+                          <i className="now-ui-icons ui-1_lock-circle-open"></i>
                         </InputGroupText>
                       </InputGroupAddon>
                       <Input
@@ -379,7 +376,9 @@ function SignUp() {
                     </InputGroup>
                   </>
                 )}
-                <CardFooter className="text-center">
+                {errors.submit && <div className="text-danger">{errors.submit}</div>}
+              </CardBody>
+              <CardFooter className="text-center">
                   <Button className="btn-fill" color="primary" type="submit">
                     Sign Up
                   </Button>
@@ -389,9 +388,6 @@ function SignUp() {
                   </Col>
                   </Row>
                 </CardFooter>
-
-                {errors.submit && <div className="text-danger">{errors.submit}</div>}
-              </CardBody>
             </Form>
           </Card>
         </Row>

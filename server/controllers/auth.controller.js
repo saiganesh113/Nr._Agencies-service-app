@@ -11,51 +11,54 @@ const generateToken = (id) => {
 // Register Technician
 export const registerTechnician = async (req, res) => {
   try {
-    const { techid, Name, email, phone, adharnumber, password } = req.body;
+    const { techid, techName, email, phone, adharnumber, password } = req.body;
 
-    // Validate input
-    if (!techid || !Name || !email || !phone || !adharnumber|| !password) {
+    // Check if all required fields are provided
+    if (!techid || !techName || !email || !phone || !adharnumber || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if technician already exists
+    // Check if a technician with the provided techid or email already exists
     const existingTechnician = await Technician.findOne({ techid });
-    if (existingTechnician) {
-      return res.status(400).json({ message: 'Technician with this Tech ID already exists' });
+    const existingEmail = await Technician.findOne({ email });
+    
+    if (existingTechnician || existingEmail) {
+      return res.status(400).json({ message: 'Technician with this Tech ID or Email already exists' });
     }
 
-    // Hash password
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new technician
+    // Create a new technician
     const technician = new Technician({
       techid,
-      Name,
+      techName,
       email,
       phone,
       adharnumber,
       password: hashedPassword,
     });
 
+    // Save the new technician to the database
     await technician.save();
 
-    // Generate JWT token
+    // Generate a JWT token for the technician
     const token = generateToken(technician._id);
 
-    // Respond with success message and token
+    // Send a success response with the technician's details and token
     res.status(201).json({
       message: 'Technician registered successfully',
       token,
       technician: {
         techid: technician.techid,
-        Name: technician.Name,
+        techName: technician.techName,
         email: technician.email,
         phone: technician.phone,
         adharnumber: technician.adharnumber,
-        pancard: technician.pancard,
-      }
+      },
     });
   } catch (error) {
+    // Handle any server errors
     console.error('Error registering technician:', error.message);
     res.status(500).json({ message: 'Server error. Please try again later.' });
   }
@@ -68,7 +71,7 @@ export const registerUser = async (req, res) => {
 
     if (!userid || !Name || !email || !phone || !password) {
       return res.status(400).json({ message: 'All fields are required' });
-  }  
+    }
 
     const existingUser = await User.findOne({ userid });
     if (existingUser) {
@@ -164,6 +167,9 @@ export const getTechnician = async (req, res) => {
     res.status(500).json({ message: 'Server error. Please try again later.' });
   }
 };
+
+// Login User
+
 
 // Update Technician
 export const updateTechnician = async (req, res) => {

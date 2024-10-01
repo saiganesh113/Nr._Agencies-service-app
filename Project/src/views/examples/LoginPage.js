@@ -65,11 +65,16 @@ function LoginPage() {
         // Make login request to backend
         const response = await axios.post(endpoint, payload);
 
-        console.log(response.data); // Log the response to inspect its structure
-
-        // Extract token and ID from the response
+        // Check if response data is correctly structured
         const { token, user, techId } = response.data;
+        if (!token || (role === "user" && !user) || (role === "technician" && !techId)) {
+            setError("Invalid login response. Please try again.");
+            return;
+        }
+
         const decodedToken = jwtDecode(token);
+
+        // Extract userId or techId based on role
         const id = role === "user"
             ? user?.userid || decodedToken.userId
             : techId || decodedToken.techId;
@@ -92,11 +97,12 @@ function LoginPage() {
             setError("Invalid User ID or password. Please try again.");
         }
     } catch (error) {
-        // Handle the login error
+        // Handle login error
         console.error("Login error:", error.response ? error.response.data : error.message);
-        setError(error.response ? error.response.data.message : "An error occurred. Please try again.");
+        setError(error.response?.data?.message || "An error occurred. Please try again.");
     }
 };
+
 
   return (
     <>
