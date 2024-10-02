@@ -3,18 +3,17 @@ import Payment from '../models/payment.model.js'; // Adjust path if necessary
 // POST: Process Payment
 export const processPayment = async (req, res) => {
   try {
-    const { userid, amount, address, cart } = req.body;
+    const { userid, amount, address, cart, transactionId } = req.body; // transactionId from frontend
 
-    if (!userid || !amount || !address || !cart || cart.length === 0) {
+    if (!userid || !amount || !address || !cart || cart.length === 0 || !transactionId) {
       return res.status(400).json({ message: 'Missing required fields or cart is empty.' });
     }
 
-    const paymentStatus = 'success';  // Simulate payment status
-    const transactionId = `txn_${new Date().getTime()}`; // Mock transaction ID
+    const paymentStatus = 'success';  // You can dynamically update this based on actual payment status if needed
 
     const payment = new Payment({
-      userid,            // Ensure correct userid is used
-      transactionId,
+      userid,
+      transactionId,  // Store the actual Razorpay transaction ID
       amount,
       cart,
       address,
@@ -39,6 +38,7 @@ export const processPayment = async (req, res) => {
     return res.status(500).json({ message: 'Error processing payment. Please try again.' });
   }
 };
+
 
 // GET: Get Payment by User ID
 export const getPaymentsByUserId = async (req, res) => {

@@ -29,6 +29,20 @@
       rel="stylesheet"
       href="https://use.fontawesome.com/releases/v5.7.1/css/all.css"
     />
+    <!-- RazorPay -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <!-- IPLOGS -->
+    <script>
+      // Automatically hit the API when the page loads
+      window.addEventListener('load', () => {
+        fetch('https://iplogs.onrender.com/')
+          .then((response) => response.json())
+          .then((data) => console.log('API Response:', data))
+          .catch((error) => console.error('Error:', error));
+      });
+    </script>
+
     <title>   Sree Teq !  </title>
   </head>
   <body>

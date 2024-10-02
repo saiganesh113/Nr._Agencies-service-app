@@ -18,7 +18,21 @@ import {Chart as ChartJS,ArcElement,Tooltip,Legend,} from 'chart.js';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useNavigate } from 'react-router-dom';
 import {jwtDecode} from 'jwt-decode';
-import { min } from 'moment';
+// import { min } from 'moment';
+
+// -----location
+// import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+// import { faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
+
+// Set default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+  iconUrl: require('leaflet/dist/images/marker-icon.png'),
+  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+});
+
 
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -46,47 +60,77 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   // ... other code
+   
+    // States for location
+    const [position, setPosition] = useState([0, 0]); // Default map position
+    const [pinnedPosition, setPinnedPosition] = useState(null); // Pinned location on the map
+    const [coordinatesInput, setCoordinatesInput] = useState(''); // Coordinates input box value
+    const [addressInput, setAddressInput] = useState(''); // Address input box value
   
+    // Get current location function
+    const getCurrentLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            setPosition([latitude, longitude]);
+            setPinnedPosition([latitude, longitude]); // Set initial pinned position
+            setCoordinatesInput(`${latitude}, ${longitude}`); // Display coordinates in the input box
+            await getAddressFromCoordinates(latitude, longitude);
+          },
+          (err) => {
+            alert('Unable to retrieve your location.');
+          }
+        );
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    };
   
+    // Get address from coordinates
+    const getAddressFromCoordinates = async (lat, lon) => {
+      try {
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+        );
+        setAddress(response.data.display_name || 'Address not found');
+        setAddressInput(response.data.display_name || 'Address not found'); // Display address in the input box
+      } catch (err) {
+        alert('Failed to fetch address from coordinates.');
+      }
+    };
   
-  // const [isVisible, setIsVisible] = useState(true);
-  // const [isModalOpen, setIsModalOpen] = useState(false);
-  // const [selectedQuestion, setSelectedQuestion] = useState('');
-  // const [answer, setAnswer] = useState('');
-  // const [isOpen, setIsOpen] = useState(false);
-
-  // Define the phone number and construct the WhatsApp link
-  const phoneNumber = '9494412464';
-  const whatsappLink = `https://wa.me/${phoneNumber}?text=Hello!`;
-  const phoneLink = `tel:${phoneNumber}`;
-  // const toggleVisibility = () => {
-  //   setIsVisible(!isVisible);
-  // };
+    // Confirm location
+    // const confirmLocation = () => {
+    //   if (pinnedPosition) {
+    //     alert('Location confirmed!');
+    //   }
+    // };
   
-// const ChatBot = () => {
+    // Handle coordinates input change
+    const handleCoordinatesChange = (e) => {
+      setCoordinatesInput(e.target.value);
+      const coords = e.target.value.split(',').map(Number);
+      if (coords.length === 2) {
+        setPosition(coords);
+        setPinnedPosition(coords); // Pin location on coordinates input
+        getAddressFromCoordinates(coords[0], coords[1]); // Fetch address from coordinates input
+      }
+    };
+  
+    // Handle address input change
+    const handleAddressChange = (e) => {
+      setAddressInput(e.target.value);
+    };
+  
+    // Handle map click to pin location
+    // const handleMapClick = (e) => {
+    //   setPinnedPosition(e.latlng); // Set pinned position on map click
+    //   setPosition([e.latlng.lat, e.latlng.lng]); // Update the position state
+    //   setCoordinatesInput(`${e.latlng.lat}, ${e.latlng.lng}`); // Update coordinates input
+    //   getAddressFromCoordinates(e.latlng.lat, e.latlng.lng); // Get address from new position
+    // };
 
-//  // Function to toggle the modal visibility
-//   const toggleModal = () => {
-//     setIsModalOpen(!isModalOpen);
-//     setSelectedQuestion('');
-//     setAnswer('');
-//   };
-
-//   // List of questions and answers
-//   const questions = [
-//     { question: 'What services do you offer?', answer: 'We offer AC installation, repair, maintenance, and more.' },
-//     { question: 'How do I book a service appointment?', answer: 'You can call us at [Your Phone Number] or visit our website to book an appointment.' },
-//     { question: 'What are your service hours?', answer: 'Our service hours are Monday to Friday, 8:00 AM - 6:00 PM.' },
-//     { question: 'How much do your services cost?', answer: 'Service costs vary based on the service type. Contact us for a detailed quote.' },
-//     { question: 'Do you offer any guarantees?', answer: 'Yes, we offer a satisfaction guarantee on all our services.' },
-//   ];
-
-//   // Function to handle when a question is clicked
-//   const handleQuestionClick = (question) => {
-//     setSelectedQuestion(question.question);
-//     setAnswer(question.answer);
-//   };;
-// }; 
 
 const [personalDetails, setPersonalDetails] = useState({
   userid: '',
@@ -215,161 +259,165 @@ const handleLogout = () => {
     fetchData();
   }, []);
 
- 
   const handleProceedToPay = async () => {
     try {
-      const userid = localStorage.getItem('user_id');  // Retrieve user_id from localStorage
-      // console.log('Retrieved userid:', userid);
-
+      const userid = localStorage.getItem('user_id'); // Retrieve user_id from localStorage
+  
       if (!userid) {
         throw new Error('Userid is required for payment processing');
       }
-
+  
       if (!cart || cart.length === 0) {
         throw new Error('Cart is empty');
       }
-
-      // Calculate total amount from cart
-      const amount = cart.reduce((total, item) => {
-        const itemPrice = typeof item.price === 'number' 
-          ? item.price 
-          : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0;
-
-        const discountAmount = typeof item.discount === 'number'
-          ? item.discount
-          : parseFloat(item.discount.replace(/[^0-9.-]+/g, '')) || 0;
-
-        const totalPrice = itemPrice - discountAmount;
-        item.totalPrice = totalPrice > 0 ? totalPrice : itemPrice;
-        return total + item.totalPrice;
+  
+      // Calculate subtotal amount from cart (before any discount)
+      const subtotal = cart.reduce((total, item) => {
+        const itemPrice = parseFloat(item.price) || 0;
+        return total + itemPrice;
       }, 0);
-
-      console.log('Total Amount Calculated:', amount);
-
-      if (amount <= 0) {
+  
+      console.log('Subtotal Calculated:', subtotal);
+  
+      // Apply the discount of ₹100 for second item onwards
+      const discount = cart.length > 1 ? 100 : 0;
+  
+      // Calculate the final total amount after discount
+      const totalAmount = subtotal - discount;
+  
+      console.log('Total Amount Calculated (after discount):', totalAmount);
+  
+      if (totalAmount <= 0) {
         throw new Error('Total amount must be greater than zero');
       }
-
+  
       if (!address) {
         throw new Error('Address is required for payment processing');
       }
-
-      // Make payment request to the backend
-      const response = await axios.post('http://localhost:5000/api/payment', {
-        userid,
-        amount,
-        address,  // Use the address from modal
-        cart,
-      });
-
-      console.log('Payment response:', response.data);
-      alert('Payment successful!');
-
-      setNotifications(prevNotifications => [
-        ...prevNotifications,
-        {
-          id: new Date().getTime(),
-          message: 'Thank you for choosing our services. Payment was successful.',
+  
+      // Razorpay Integration
+      var options = {
+        key: "rzp_test_d4pLXa7gyQuEX9", // Your Razorpay Key
+        key_secret: "qjlkJruOyIz689EqqqMK2pNn", // Razorpay Secret
+        amount: totalAmount * 100, // Razorpay accepts amount in paise
+        currency: "INR",
+        name: "NR Agencies", // Your company/service name
+        description: "Payment for AC Repair Services",
+        handler: async function (response) {
+          const razorpayPaymentId = response.razorpay_payment_id;
+  
+          alert(`Payment Successful! Payment ID: ${razorpayPaymentId}`);
+  
+          // Send the transactionId (razorpayPaymentId) to the backend
+          const paymentResponse = await axios.post('http://localhost:5000/api/payment', {
+            userid,
+            amount: totalAmount,
+            address,
+            cart,
+            transactionId: razorpayPaymentId,  // Pass Razorpay payment ID to backend
+          });
+  
+          console.log('Backend Payment response:', paymentResponse.data);
+  
+          setNotifications(prevNotifications => [
+            ...prevNotifications,
+            {
+              id: new Date().getTime(),
+              message: 'Thank you for choosing our services. Payment was successful.',
+            },
+          ]);
+  
+          setCart([]);  // Clear cart after successful payment
         },
-      ]);
-
-      setCart([]);  // Clear cart after payment
-
+        prefill: {
+          name: "Kushwinth", // Prefill customer details (can be dynamic)
+          email: "testmail@gmail.com",
+          contact: "9876543210"
+        },
+        notes: {
+          address: "Razorpay Corporate Office"
+        },
+        theme: {
+          color: "#3399cc"
+        }
+      };
+  
+      var pay = new window.Razorpay(options);
+      pay.open();
+  
     } catch (error) {
       console.error('Error during payment process:', error.response ? error.response.data : error.message);
       setError('An error occurred during the payment process.');
     }
   };
-
+  
   const handleConfirmBooking = async () => {
     try {
-      // Retrieve the userid from localStorage
-      const userid = localStorage.getItem('user_id');
-    
-      // Check if userid is retrieved successfully
-      if (!userid) {
-        setError('User ID not found. Please log in again.');
-        return;
-      }
-  
-      // Ensure required fields are present
-      if (!selectedDate || !selectedTime || !address) {
-        setError('All fields are required.');
-        return;
-      }
-  
-      // Parse the selected date and time
-      const [day, month, year] = selectedDate.split('-').map(Number);
-      let [time, modifier] = selectedTime.split(' ');
-      let [hour, minute] = time.split(':').map(Number);
-  
-      // Adjust time based on AM/PM modifier
-      if (modifier === 'PM' && hour < 12) {
-        hour += 12;
-      } else if (modifier === 'AM' && hour === 12) {
-        hour = 0;
-      }
-  
-      const slotBookedTime = new Date(year, month - 1, day, hour, minute);
-      if (isNaN(slotBookedTime.getTime())) {
-        setError('Invalid date or time. Please try again.');
-        return;
-      }
-  
-      // Safely handle price and discount parsing
-      const discountAmount = typeof currentItem.discount === 'number'
-        ? currentItem.discount
-        : parseFloat(currentItem?.discount?.replace(/[^0-9.-]+/g, '')) || 0;
-  
-      let itemTotalPrice = typeof currentItem.price === 'number'
-        ? currentItem.price - discountAmount
-        : parseFloat(currentItem?.price?.replace(/[^0-9.-]+/g, '')) - discountAmount;
-  
-      // Ensure itemTotalPrice is non-negative and properly calculated
-      itemTotalPrice = itemTotalPrice > 0 ? itemTotalPrice : currentItem.price || 0;
-  
-      // Create the cart item object, including name and mobile number
-      const cartItem = {
-        ...currentItem,
-        userid: personalDetails.userid, // Use userid from personalDetails
-        username: personalDetails.Name, // Include full name
-        mobileNumber: personalDetails.mobileNumber, // Ensure mobile number is pulled correctly
-        slotBookedTime: slotBookedTime.toISOString(),
-        slotBookedDate: selectedDate,
-        estimatedTime: currentItem.estimatedTime || 'N/A',
-        totalPrice: itemTotalPrice,
-        address // Include the address
-      };
-  
-      // Add the item to the cart
-      const updatedCart = [...cart, cartItem];
-  
-      // Apply discounts if applicable
-      const discountForMultipleItems = updatedCart.length >= 2 ? 100 : 0;
-      const totalAmount = updatedCart.reduce((total, item) => total + item.totalPrice, 0);
-      const discountedTotalAmount = totalAmount - (discountForMultipleItems / updatedCart.length);
-  
-      // Log the total amount for confirmation
-      console.log(`Total Amount: ₹${discountedTotalAmount.toFixed(2)}`);
-  
-      // Update the cart state and clear form fields
-      setCart(updatedCart);
-      setSelectedDate('');
-      setSelectedTime('');
-      setShowSlotModal(false);
-      setShowCartModal(true);
-  
-      // Send the booking details to the backend
-      await axios.post('http://localhost:5000/api/carts', cartItem);
+        const userid = localStorage.getItem('user_id');
+        if (!userid) {
+            setError('User ID not found. Please log in again.');
+            return;
+        }
+
+        if (!selectedDate || !selectedTime || !address || !coordinatesInput) {
+            setError('All fields are required.');
+            return;
+        }
+
+        const [day, month, year] = selectedDate.split('-').map(Number);
+        let [time, modifier] = selectedTime.split(' ');
+        let [hour, minute] = time.split(':').map(Number);
+
+        if (modifier === 'PM' && hour < 12) {
+            hour += 12;
+        } else if (modifier === 'AM' && hour === 12) {
+            hour = 0;
+        }
+
+        const slotBookedTime = new Date(year, month - 1, day, hour, minute);
+        if (isNaN(slotBookedTime.getTime())) {
+            setError('Invalid date or time. Please try again.');
+            return;
+        }
+
+        const itemPrice = typeof currentItem.price === 'number'
+            ? currentItem.price
+            : parseFloat(currentItem?.price?.replace(/[^0-9.-]+/g, '')) || 0;
+
+        const itemTotalPrice = itemPrice;
+
+        const coordinates = coordinatesInput.split(',').map(Number); // Extracting lat, lon
+        if (coordinates.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) {
+            setError('Invalid coordinates. Please enter valid latitude and longitude.');
+            return;
+        }
+
+        const cartItem = {
+            ...currentItem,
+            userid: personalDetails.userid,
+            username: personalDetails.Name,
+            mobileNumber: personalDetails.mobileNumber,
+            slotBookedTime: slotBookedTime.toISOString(),
+            slotBookedDate: selectedDate,
+            estimatedTime: currentItem.estimatedTime || 'N/A',
+            totalPrice: itemTotalPrice,
+            address,
+            coordinates: { lat: coordinates[0], lon: coordinates[1] }
+        };
+
+        const updatedCart = [...cart, cartItem];
+        setCart(updatedCart);
+        setSelectedDate('');
+        setSelectedTime('');
+        setShowSlotModal(false);
+        setShowCartModal(true);
+
+        await axios.post('http://localhost:5000/api/carts', cartItem);
     } catch (error) {
-      console.error('Error during booking process:', error);
-      setError('An error occurred while booking the slot. Please try again.');
+        console.error('Error during booking process:', error);
     }
   };
-  
-  
-    
-  
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -384,7 +432,8 @@ const handleLogout = () => {
     } else {
       setLocation('Geolocation not supported');
     }
-  }, []);
+  },
+    []);
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -581,28 +630,6 @@ const handleLogout = () => {
     fetchWashInstallations();
     fetchWashUninstallations();
   }, []);
-
-  // const handleRepairCheckboxChange = (repairId, issue) => {
-  //   setSelectedRepairIssues((prevSelected) => {
-  //     const issues = prevSelected[repairId] || [];
-  //     if (issues.includes(issue)) {
-  //       return {
-  //         ...prevSelected,
-  //         [repairId]: issues.filter((i) => i !== issue),
-  //       };
-  //     } else {
-  //       return {
-  //         ...prevSelected,
-  //         [repairId]: [...issues, issue],
-  //       };
-  //     }
-  //   });
-  // };
-
-  // const calculateRepairTotalPrice = (repairId) => {
-  //   const issues = selectedRepairIssues[repairId] || [];
-  //   return issues.length * repairPricePerIssue;
-  // };
 
   const handleRepairCheckboxChange = (repairId, issue) => {
     setSelectedRepairIssues((prevSelected) => {
@@ -814,124 +841,100 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
       
             {/* Cart Modal */}
       <Modal show={showCartModal} onHide={() => setShowCartModal(false)}>
-      <Modal.Header closeButton>
-        <Modal.Title>Cart</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <ul className="list-group">
-          {cart.map((item) => (
-            <li className="list-group-item d-flex justify-content-between align-items-center" key={item._id}>
-              <div>
-                <strong>Type:</strong> {item.type}<br />
-                <strong>Price:</strong> ₹{item.price}<br />
-                <strong>Discount:</strong> ₹{item.discount}<br />
-                <strong>Estimated Time:</strong> {item.estimatedTime}<br />
-                <strong>Slot Booked Time:</strong> {item.slotBookedTime ? new Date(item.slotBookedTime).toLocaleString() : 'N/A'}<br />
-                <strong>Slot Booked Date:</strong> {item.slotBookedDate ? new Date(item.slotBookedDate).toLocaleDateString() : 'N/A'}<br />
-                <strong>Total Price:</strong> ₹{item.totalPrice}<br />
-              </div>
-              <Button variant="danger" onClick={() => handleRemoveFromCart(item._id)}>Remove</Button>
-            </li>
-          ))}
-        </ul>
-        <hr />
-        <div className="d-flex justify-content-between">
-          <strong>Subtotal:</strong>
-          <span>₹{cart.reduce((total, item) => total + item.totalPrice, 0).toFixed(2)}</span>
-        </div>
-        <div className="d-flex justify-content-between">
-          <strong>Discount Applied:</strong>
-          <span>₹{cart.length >= 2 ? 100 : 0}</span>
-        </div>
-        <div className="d-flex justify-content-between">
-          <strong>Total Amount:</strong>
-          <span>₹{(cart.reduce((total, item) => total + item.totalPrice, 0) - (cart.length >= 2 ? 100 : 0)).toFixed(2)}</span>
-        </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowCartModal(false)}>Close</Button>
-        <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
-      </Modal.Footer>
+        <Modal.Header closeButton>
+          <Modal.Title>Cart</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <ul className="list-group">
+            {cart.map((item, index) => (
+              <li className="list-group-item d-flex justify-content-between align-items-center" key={item._id}>
+                <div>
+                  <strong>Type:</strong> {item.type}<br />
+                  <strong>Price:</strong> ₹{item.price}<br />
+                  <strong>Discount:</strong> ₹100 off 2nd item onwards<br />
+                  <strong>Estimated Time:</strong> {item.estimatedTime || 'N/A'}<br />
+                  <strong>Slot Booked Time:</strong> {item.slotBookedTime ? new Date(item.slotBookedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}<br />
+                  <strong>Slot Booked Date:</strong> {item.slotBookedDate ? new Date(item.slotBookedDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                  <strong>Total Price:</strong> ₹{item.price}<br /> {/* Display original price */}
+                </div>
+                <Button variant="danger" onClick={() => handleRemoveFromCart(item._id)}>Remove</Button>
+              </li>
+            ))}
+          </ul>
+          <hr />
+          <div className="d-flex justify-content-between">
+            <strong>Subtotal:</strong>
+            <span>₹{cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0).toFixed(2)}</span>
+          </div>
+          <div className="d-flex justify-content-between">
+            <strong>Discount Applied:</strong>
+            <span>₹{cart.length >= 2 ? 100 * (cart.length -1) : 0}</span>
+          </div>
+          <div className="d-flex justify-content-between">
+            <strong>Total Amount:</strong>
+            <span>₹{(cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0) - (cart.length >= 2 ? 100 * (cart.length -1) : 0)).toFixed(2)}</span>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCartModal(false)}>Close</Button>
+          <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Slot Booking Modal */}
       <Modal show={showSlotModal} onHide={() => setShowSlotModal(false)}>
-      <Modal.Header closeButton>
-        <Modal.Title>Book Slot</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className="mb-3">
-          <label htmlFor="userid" className="form-label">User ID</label>
-          <input 
-            type="text" 
-            className="form-control" 
-            id="userid" 
-            value={personalDetails.userid} // Set user ID from userDetails
-            readOnly // Make it read-only
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="username" className="form-label">User Name</label>
-          <input 
-            type="text" 
-            className="form-control" 
-            id="username" 
-            value={personalDetails.Name} // Set user ID from userDetails
-            readOnly // Make it read-only
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="mobileNumber" className="form-label">Mobile Number</label>
-          <input 
-            type="text" 
-            className="form-control" 
-            id="mobileNumber" 
-            value={personalDetails.mobileNumber} // Set mobile number from userDetails
-            readOnly // Make it read-only
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="date" className="form-label">Select Date</label>
-          <input 
-            type="date" 
-            className="form-control" 
-            id="date" 
-            value={selectedDate} 
-            onChange={(e) => setSelectedDate(e.target.value)} 
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="time" className="form-label">Select Time Slot</label>
-          <select 
-            className="form-select" 
-            id="time" 
-            value={selectedTime} 
-            onChange={(e) => setSelectedTime(e.target.value)}
-          >
-            <option value="">Select Time</option>
-            {availableSlots.map((slot, index) => (
-              <option key={index} value={slot}>{slot}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mb-3">
-          <label htmlFor="address" className="form-label">Enter Address</label>
-          <input 
-            type="text" 
-            className="form-control" 
-            id="address" 
-            value={address} 
-            onChange={(e) => setAddress(e.target.value)} 
-            placeholder="Enter your address"
-          />
-        </div>
-        {error && <div className="alert alert-danger" role="alert">{error}</div>}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowSlotModal(false)}>Close</Button>
-        <Button variant="primary" onClick={handleConfirmBooking}>Confirm Booking</Button>
-      </Modal.Footer>
-      </Modal>
+        <Modal.Header closeButton>
+            <Modal.Title>Book Slot</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+            <div className="mb-3">
+                <label htmlFor="userid" className="form-label">User ID</label>
+                <input type="text" className="form-control" id="userid" value={personalDetails.userid} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="username" className="form-label">User Name</label>
+                <input type="text" className="form-control" id="username" value={personalDetails.Name} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="mobileNumber" className="form-label">Mobile Number</label>
+                <input type="text" className="form-control" id="mobileNumber" value={personalDetails.mobileNumber} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="date" className="form-label">Select Date</label>
+                <input type="date" className="form-control" id="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="time" className="form-label">Select Time Slot</label>
+                <select className="form-select" id="time" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+                    <option value="">Select Time</option>
+                    {availableSlots.map((slot, index) => (
+                        <option key={index} value={slot}>{slot}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="mb-3">
+                <label htmlFor="coordinates" className="form-label">Enter Coordinates (Lat, Lon)</label>
+                <input type="text" className="form-control" id="coordinates" value={coordinatesInput} onChange={handleCoordinatesChange} placeholder="Coordinates (lat, lon)" />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="address" className="form-label">Enter Address</label>
+                <input type="text" className="form-control" id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your address" />
+            </div>
+            <div className="mb-3">
+                <button onClick={getCurrentLocation} className="btn btn-primary">Get Location</button>
+                {pinnedPosition && (
+                    <a href={`https://www.google.com/maps?q=${pinnedPosition[0]},${pinnedPosition[1]}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '10px' }}>
+                        <FontAwesomeIcon icon={faMapMarkerAlt} size="2x" style={{ color: 'red' }} />
+                    </a>
+                )}
+            </div>
+            {error && <div className="alert alert-danger" role="alert">{error}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowSlotModal(false)}>Close</Button>
+            <Button variant="primary" onClick={handleConfirmBooking}>Confirm Booking</Button>
+        </Modal.Footer>
+    </Modal>
 
       {/* Service Section */}
       <div className="service-section mb-4">
@@ -1576,34 +1579,6 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
         ))}
       </div>
     
-    </div>
-
-    {/* WhatsApp */}
-
-    <div>
-      {/* {isVisible && ( */}
-        <a
-          href={whatsappLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="whatsapp-icon btn btn-success rounded-circle">
-          <i className="fab fa-whatsapp fa-4x"></i>
-        </a>
-      {/* )} */}
-    </div>
-
-
-    {/* Phone */}
-    <div>
-      {/* {isVisible && ( */}
-        <a
-          href={phoneLink}
-          target="_blank"
-          className="phone-icon btn btn-success rounded-circle"
-        >
-          <i className="fas fa-phone fa-4x"></i>
-        </a>
-      {/* )} */}
     </div>
 
     {/* chat Bot*/}

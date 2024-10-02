@@ -5,7 +5,7 @@ import User from '../models/user.model.js';
 
 // Helper function to generate JWT token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
 // Register Technician

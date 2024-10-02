@@ -14,7 +14,12 @@ import UserDashboard from "components/Navbars/UserDashboard";
 import SignUp from "views/index-sections/SignUp";
 import TechnicianDashboard from "components/Navbars/TechnicianDashboard";
 
+// Importing UserDashboard CSS properly
+import "components/Navbars/UserDashboard.css";  // Import CSS without assigning it to a variable
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
+const whatsappLink = `https://wa.me/9494412464?text=Hello!`;
+const phoneLink = `tel:${9494412464}`;
 
 root.render(
   <BrowserRouter>
@@ -31,5 +36,28 @@ root.render(
       {/* Redirect all other paths to /index */}
       <Route path="*" element={<Navigate to="/index" replace />} />
     </Routes>
+
+    {/* WhatsApp */}
+    <div>
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="whatsapp-icon btn btn-success rounded-circle"
+        >
+          <i className="fab fa-whatsapp fa-4x"></i>
+        </a>
+    </div>
+
+    {/* Phone */}
+    <div>
+        <a
+          href={phoneLink}
+          target="_blank"
+          className="phone-icon btn btn-success rounded-circle"
+        >
+          <i className="fas fa-phone fa-4x"></i>
+        </a>
+    </div>
   </BrowserRouter>
 );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FaCheck, FaTimes, FaMapMarkerAlt, FaPhoneAlt } from 'react-icons/fa';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Container, Row, Col, Card, Badge, Button, Modal, Form } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -12,6 +13,7 @@ import { Bar } from 'react-chartjs-2';
 import PieChart from './piechart';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+
 
 const TechnicianDashboard = ({techid, userId }) => {
   const [location, setLocation] = useState('Fetching location...');
@@ -191,6 +193,24 @@ const TechnicianDashboard = ({techid, userId }) => {
   };
 
   return (
+    <>
+    <style>
+        {`
+          .icon-button {
+            background-color: transparent;
+            border: none;
+            align-items:center;
+            margin-right: 43px; /* Adjust spacing between icons */
+            color: #007bff; /* Change color as needed */
+            font-size: 1.5rem; /* Adjust size as needed */
+            cursor: pointer;
+          }
+
+          .icon-button:hover {
+            color: #0056b3; /* Adjust hover color */
+          }
+        `}
+    </style>
     <Container fluid className="mobile-dashboard p-0">
       <Row className="header d-flex justify-content-between align-items-center py-3 mx-0">
         <Col xs={3} className="d-flex align-items-center">
@@ -276,9 +296,18 @@ const TechnicianDashboard = ({techid, userId }) => {
                 ? {
                     filter: 'blur(2px) brightness(70%)',
                     opacity: '0.7',
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
                   }
                 : {};
+
+              const handleViewLocation = (lat, lon) => {
+                const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                window.open(googleMapsUrl, '_blank'); // Opens location in a new tab
+              };
+
+              const handleCall = (mobileNumber) => {
+                window.location.href = `tel:${mobileNumber}`; // Initiates a phone call
+              };
 
               return (
                 <Col xs={10} md={5} lg={5} key={order.transactionId} className="mb-3">
@@ -288,8 +317,8 @@ const TechnicianDashboard = ({techid, userId }) => {
                       <Card.Text>
                         <strong>Amount:</strong> ₹{order.amount}
                         <br />
-                        <strong>User ID:</strong> {order.userid || 'Not provided'} <br />{/* Access userId from order object */}
-                        <strong>User Name:</strong> {order.cart[0].username|| 'Not provided'}
+                        <strong>User ID:</strong> {order.userid || 'Not provided'} <br />
+                        <strong>User Name:</strong> {order.cart[0].username || 'Not provided'}
                         <ul>
                           {order.cart.map((item, index) => (
                             <li key={index}>
@@ -299,6 +328,7 @@ const TechnicianDashboard = ({techid, userId }) => {
                               <div>{item.cleaning}</div>
                               <div>{item.discount}</div>
                               <div>{item.reviews}</div>
+                              <div><strong>Coordinates:</strong> Lat: {item.coordinates?.lat}, Lon: {item.coordinates?.lon}</div>
                             </li>
                           ))}
                         </ul>
@@ -307,12 +337,23 @@ const TechnicianDashboard = ({techid, userId }) => {
                         <strong>Mobile Number:</strong> {order.cart[0].mobileNumber || 'Not provided'}
                       </Card.Text>
                       {!completedOrders.includes(order.transactionId) && (
-                        <Button onClick={() => handleOrderAction(order.transactionId, 'complete')}>
-                          Mark as Completed
+                        <Button onClick={() => handleOrderAction(order.transactionId, 'complete')} className="icon-button">
+                          <FaCheck />
                         </Button>
                       )}
-                      <Button onClick={() => handleOrderAction(order.transactionId, 'cancel')}>
-                        Cancel Order
+                      <Button onClick={() => handleOrderAction(order.transactionId, 'cancel')} className="icon-button">
+                        <FaTimes />
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          handleViewLocation(order.cart[0].coordinates?.lat, order.cart[0].coordinates?.lon)
+                        }
+                        className="icon-button"
+                      >
+                        <FaMapMarkerAlt />
+                      </Button>
+                      <Button onClick={() => handleCall(order.cart[0].mobileNumber)} className="icon-button">
+                        <FaPhoneAlt />
                       </Button>
                     </Card.Body>
                   </Card>
@@ -423,8 +464,8 @@ const TechnicianDashboard = ({techid, userId }) => {
     </Button>
   </Modal.Footer>
 </Modal>
-
-    </Container>
+</Container>
+</>
   );
 };
 
