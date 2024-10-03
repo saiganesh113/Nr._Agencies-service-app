@@ -112,22 +112,24 @@ export const removeFromCart = async (req, res) => {
 // Add a CartItem
 export const addCartItem = async (req, res) => {
   try {
-    const newItem = new CartItem({
+    const { serviceId, name, price, technology, warranty, issues, estimatedTime, quantity, userId } = req.body;
+    const cartItem = new CartItem({
       serviceType: req.body.serviceType,
-      serviceId: req.body.serviceId,
-      name: req.body.name,
-      price: req.body.price,
-      technology: req.body.technology,
-      warranty: req.body.warranty,
-      issues: req.body.issues,
-      estimatedTime: req.body.estimatedTime,
-      userId: req.user._id, // Assuming you're using middleware to attach user info
+      serviceId,
+      name,
+      price,
+      technology,
+      warranty,
+      issues,
+      estimatedTime,
+      quantity,
+      userId,
     });
-
-    await newItem.save();
-    res.status(201).json(newItem);
+    await cartItem.save();
+    res.status(201).json({ message: 'Item added to cart', cartItem });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to add item to cart' });
   }
 };
 

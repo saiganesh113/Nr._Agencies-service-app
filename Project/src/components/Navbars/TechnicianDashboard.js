@@ -200,7 +200,7 @@ const TechnicianDashboard = ({techid, userId }) => {
             background-color: transparent;
             border: none;
             align-items:center;
-            margin-right: 43px; /* Adjust spacing between icons */
+            margin-right: 5px; /* Adjust spacing between icons */
             color: #007bff; /* Change color as needed */
             font-size: 1.5rem; /* Adjust size as needed */
             cursor: pointer;
