@@ -52,6 +52,8 @@ const UserDashboard = () => {
   const [showSlotModal, setShowSlotModal] = useState(false);
   const [showCartedModal, setShowCartedModal] = useState(false);
   const [showSlotedModal, setShowSlotedModal] = useState(false);
+  const [showCarterModal, setShowCarterModal] = useState(false);
+  const [showSloterModal, setShowSloterModal] = useState(false);
   const [cart, setCart] = useState([]);
   const [location, setLocation] = useState('Fetching location...');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -641,98 +643,65 @@ const handleRemoveservicefromCart = (selectedServiceId) => {
 };
 
 
-const fridgePricePerIssue = 99;
+  const fridgePricePerIssue = 99;
+  // State for storing fridge data fetched from the backend
+  const [singleDoors, setSingleDoors] = useState([]);
+  const [doubleDoors, setDoubleDoors] = useState([]);
+  const [sideBySideDoors, setSideBySideDoors] = useState([]);
 
-const singledoors = [
-  {
-    id: 1,
-    name: 'Single Door Refrigerator',
-    type: 'Checkups',
-    price: 99,
-    time: '60 min',
-    doorissues: [
-      'Excess cooling',
-      'No cooling',
-      'Door not closing',
-      'Power issue',
-      'Noise',
-      'Water leakage',
-    ],
-  },
-];
+  // State for selected issues
+  const [selectedSingleDoorIssues, setSelectedSingleDoorIssues] = useState({});
+  const [selectedDoubleDoorIssues, setSelectedDoubleDoorIssues] = useState({});
+  const [selectedSideBySideDoorIssues, setSelectedSideBySideDoorIssues] = useState({});
 
-const doubledoors = [
-  {
-    id: 1,
-    name: 'Double Door Refrigerator',
-    type: 'Inverter',
-    price: 99,
-    time: '60 min',
-    doorissues: [
-      'Excess cooling',
-      'Less cooling',
-      'No cooling',
-      'Power Issue',
-      'Noise',
-      'Water leakage',
-    ],
-  },
-  {
-    id: 2,
-    name: 'Double Door Refrigerator',
-    type: 'Non-Inverter',
-    price: 99,
-    time: '60 min',
-    doorissues: [
-      'Excess cooling',
-      'Less cooling',
-      'No cooling',
-      'Power issue',
-      'Door not closing',
-      'Noise',
-      'Water leakage',
-    ],
-  },
-];
+  // Fetch fridge data from backend
+  useEffect(() => {
+    const fetchSingleDoors = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/singledoor');
+        setSingleDoors(response.data); // Assuming response.data is an array
+      } catch (error) {
+        console.error('Error fetching single door refrigerators:', error);
+      }
+    };
 
-const sidebysidedoors = [
-  {
-    id: 1,
-    name: 'Side-By-Side Door',
-    type: 'Checkups',
-    price: 99,
-    time: '60 min',
-    doorissues: [
-      'Excess cooling',
-      'No cooling',
-      'Door not closing',
-      'Cooling issue in deep freezer only',
-      'Power issue',
-      'Noise',
-      'Water leakage (ice bucket)',
-      'Water leakage (compartment)',
-    ],
-  },
-];
+    fetchSingleDoors();
+  }, []);
+  
+  useEffect(() => {
+    const fetchDoubleDoors = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/doubledoor');
+        setDoubleDoors(response.data); // Assuming response.data is an array
+      } catch (error) {
+        console.error('Error fetching single door refrigerators:', error);
+      }
+    };
 
-const [selectedSingleDoorIssues, setSelectedSingleDoorIssues] = useState({});
-const [selectedDoubleDoorIssues, setSelectedDoubleDoorIssues] = useState({});
-const [selectedSideBySideDoorIssues, setSelectedSideBySideDoorIssues] = useState({});
+    fetchDoubleDoors();
+  }, []);
 
-const handleSingleDoorIssueChange = (id, issue) => {
-  setSelectedSingleDoorIssues((prev) => {
-    const updatedIssues = prev[id] ? [...prev[id]] : [];
-    if (updatedIssues.includes(issue)) {
-      return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
-    } else {
-      return { ...prev, [id]: [...updatedIssues, issue] };
-    }
-  });
-};
+  useEffect(() => {
+    const fetchsideBySideDoors = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/sidedoor');
+        setSideBySideDoors(response.data); // Assuming response.data is an array
+      } catch (error) {
+        console.error('Error fetching single door refrigerators:', error);
+      }
+    };
 
-  // Handle double door issue changes
-  const handleDoubleDoorIssueChange = (id, issue) => {
-    setSelectedDoubleDoorIssues((prev) => {
+    fetchsideBySideDoors();
+  }, []);
+  // Handle issue changes for different fridge types
+  const handleIssueChange = (id, issue, type) => {
+    const setSelectedIssues = {
+      'Single Door': setSelectedSingleDoorIssues,
+      'Double Door': setSelectedDoubleDoorIssues,
+      'Side-By-Side': setSelectedSideBySideDoorIssues,
+    }[type];
+
+    setSelectedIssues((prev) => {
       const updatedIssues = prev[id] ? [...prev[id]] : [];
       if (updatedIssues.includes(issue)) {
         return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
@@ -742,38 +711,33 @@ const handleSingleDoorIssueChange = (id, issue) => {
     });
   };
 
-  // Handle side-by-side door issue changes
-  const handleSideBySideDoorIssueChange = (id, issue) => {
-    setSelectedSideBySideDoorIssues((prev) => {
-      const updatedIssues = prev[id] ? [...prev[id]] : [];
-      if (updatedIssues.includes(issue)) {
-        return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
-      } else {
-        return { ...prev, [id]: [...updatedIssues, issue] };
-      }
-    });
+  // Calculate the total price based on selected issues for each fridge type
+  const calculateTotalPrice = (fridgeId, type) => {
+    const selectedIssues = {
+      'Single Door': selectedSingleDoorIssues[fridgeId],
+      'Double Door': selectedDoubleDoorIssues[fridgeId],
+      'Side-By-Side': selectedSideBySideDoorIssues[fridgeId],
+    }[type] || [];
+    return selectedIssues.length * fridgePricePerIssue;
   };
 
-// Calculate the total price based on selected issues for each fridge type
-const calculateFridgeTotalPrice = (fridgeId) => {
-  const issues = selectedSingleDoorIssues[fridgeId] || [];
-  return issues.length * fridgePricePerIssue;
-};
-
- // Calculate total price for double door refrigerators
- const calculateDoubleDoorTotalPrice = (fridgeId) => {
-  const issues = selectedDoubleDoorIssues[fridgeId] || [];
-  return issues.length * fridgePricePerIssue;
-};
-
-// Calculate total price for side-by-side door refrigerators
-const calculateSideBySideTotalPrice = (fridgeId) => {
-  const issues = selectedSideBySideDoorIssues[fridgeId] || [];
-  return issues.length * fridgePricePerIssue;
-};
-
-
-
+  
+  // Example of handling cart item booking
+  const handleFridgeBooking = (fridge) => {
+    const totalPrice = calculateTotalPrice(fridge._id, fridge.type); // Calculate based on selected issues
+    const newFridgeItem = {
+      ...fridge,
+      totalPrice, // Include total price calculated from issues
+    };
+  
+    setCart((prevCart) => [...prevCart, newFridgeItem]); // Add to cart
+    setShowSloterModal(true); // Open slot booking modal
+  };
+  
+  
+  const handleRemovefridgefromCart = (fridgeId) => {
+    setCart((prevCart) => prevCart.filter((fridge) => fridge._id !== fridgeId));
+  };
   
 
   return (
@@ -848,11 +812,11 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
           </div>
           <div className="d-flex justify-content-between">
             <strong>Discount Applied:</strong>
-            <span>₹{cart.length >= 2 ? 100 * (cart.length -1) : 0}</span>
+            <span>₹{cart.length >= 2 ? 100 : 0}</span> {/* Apply ₹100 flat discount */}
           </div>
           <div className="d-flex justify-content-between">
             <strong>Total Amount:</strong>
-            <span>₹{(cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0) - (cart.length >= 2 ? 100 * (cart.length -1) : 0)).toFixed(2)}</span>
+            <span>₹{(cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0) - (cart.length >= 2 ? 100 : 0)).toFixed(2)}</span>
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -998,7 +962,7 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
             <div className="d-flex justify-content-between">
                 <strong>Discount Applied:</strong>
                 {/* Apply discount only if more than one item is in the cart */}
-                <span>₹{cart.length > 1 ? 100 : 0}</span>
+                <span>₹{cart.length >= 2 ? 100 : 0}</span>
             </div>
             <div className="d-flex justify-content-between">
                 <strong>Total Amount:</strong>
@@ -1010,6 +974,102 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
             <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
         </Modal.Footer>
     </Modal>
+
+    <Modal show={showSloterModal} onHide={() => setShowSloterModal(false)}>
+        <Modal.Header closeButton>
+            <Modal.Title>Book Slot</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+            <div className="mb-3">
+                <label htmlFor="userid" className="form-label">User ID</label>
+                <input type="text" className="form-control" id="userid" value={personalDetails.userid} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="username" className="form-label">User Name</label>
+                <input type="text" className="form-control" id="username" value={personalDetails.Name} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="mobileNumber" className="form-label">Mobile Number</label>
+                <input type="text" className="form-control" id="mobileNumber" value={personalDetails.mobileNumber} readOnly />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="date" className="form-label">Select Date</label>
+                <input type="date" className="form-control" id="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="time" className="form-label">Select Time Slot</label>
+                <select className="form-select" id="time" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+                    <option value="">Select Time</option>
+                    {availableSlots.map((slot, index) => (
+                        <option key={index} value={slot}>{slot}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="mb-3">
+                <label htmlFor="coordinates" className="form-label">Enter Coordinates (Lat, Lon)</label>
+                <input type="text" className="form-control" id="coordinates" value={coordinatesInput} onChange={handleCoordinatesChange} placeholder="Coordinates (lat, lon)" />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="address" className="form-label">Enter Address</label>
+                <input type="text" className="form-control" id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your address" />
+            </div>
+            <div className="mb-3">
+                <button onClick={getCurrentLocation} className="btn btn-primary">Get Location</button>
+                {pinnedPosition && (
+                    <a href={`https://www.google.com/maps?q=${pinnedPosition[0]},${pinnedPosition[1]}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '10px' }}>
+                        <FontAwesomeIcon icon={faMapMarkerAlt} size="2x" style={{ color: 'red' }} />
+                    </a>
+                )}
+            </div>
+            {error && <div className="alert alert-danger" role="alert">{error}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowSloterModal(false)}>Close</Button>
+            <Button variant="primary" onClick={handleConfirmBooking}>Confirm Booking</Button>
+        </Modal.Footer>
+    </Modal>
+
+    <Modal show={showCarterModal} onHide={() => setShowCarterModal(false)}>
+        <Modal.Header closeButton>
+            <Modal.Title>Cart</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+            <ul className="list-group">
+                {cart.map((item, index) => (
+                    <li className="list-group-item d-flex justify-content-between align-items-center" key={item._id}>
+                        <div>
+                            <strong>Type:</strong> {item.type}<br />
+                            <strong>Price:</strong> ₹{item.price}<br />
+                            <strong>Estimated Time:</strong> {item.time || 'N/A'}<br />
+                            <strong>Slot Booked Time:</strong> {item.slotBookedTime ? new Date(item.slotBookedTime).toLocaleTimeString() : 'N/A'}<br />
+                            <strong>Slot Booked Date:</strong> {item.slotBookedDate ? new Date(item.slotBookedDate).toLocaleDateString() : 'N/A'}<br />
+                            <strong>Total Price:</strong> ₹{item.totalPrice} <br />
+                        </div>
+                        <Button variant="danger" onClick={() => handleRemovefridgefromCart(item._id)}>Remove</Button>
+                    </li>
+                ))}
+            </ul>
+            <hr />
+            <div className="d-flex justify-content-between">
+                <strong>Subtotal:</strong>
+                <span>₹{cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0).toFixed(2)}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+                <strong>Discount Applied:</strong>
+                {/* Apply discount only if more than one item is in the cart */}
+                <span>₹{cart.length >= 2 ? 100 : 0}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+                <strong>Total Amount:</strong>
+                <span>₹{(cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0) - (cart.length > 1 ? 100 : 0)).toFixed(2)}</span>
+            </div>
+        </Modal.Body>
+        <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowCarterModal(false)}>Close</Button>
+            <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
+        </Modal.Footer>
+    </Modal>
+
 
       {/* Service Section */}
       <div className="service-section mb-4">
@@ -1426,222 +1486,201 @@ const calculateSideBySideTotalPrice = (fridgeId) => {
     </div>
 
     <div className='container'>
-    <h2 style={{ fontSize: '2.5rem' }}>Refrigerators Service</h2>
-      <h3> Single Door Issues</h3>
+      <h2 style={{ fontSize: '2.5rem' }}>Refrigerator Services</h2>
+
+      {/* Single Door Issues Section */}
+      <h3>Single Door Issues</h3>
       <div className="row">
-        {singledoors.map((singledoor) => (
-          <div className="col-md-6 mb-4" key={singledoor.id}>
-            <div className="card h-100">
-              <div className="card-body d-flex align-items-center justify-content-between">
-                {/* Text Section */}
-                <div>
-                  <h5 className="card-title">{singledoor.name}</h5>
-                  <p className="card-text">Type: {singledoor.type}</p>
-                  <p className="card-text">Base Price: ₹{singledoor.price}</p>
-                  <div className="form-group">
-                    {singledoor.doorissues && singledoor.doorissues.length > 0 ? (
-                      singledoor.doorissues.map((issue, issueIndex) => (
-                        <div className="form-check" key={issueIndex}>
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={selectedSingleDoorIssues[singledoor.id]?.includes(issue) || false}
-                            onChange={() => handleSingleDoorIssueChange(singledoor.id, issue)}
-                            id={`single-door-issue-${singledoor.id}-${issueIndex}`}
-                          />
-                          <label
-                            className={`form-check-label ${selectedSingleDoorIssues[singledoor.id]?.includes(issue) ? 'text-primary' : ''}`}
-                            htmlFor={`single-door-issue-${singledoor.id}-${issueIndex}`}
-                          >
-                            {issue}
-                            {selectedSingleDoorIssues[singledoor.id]?.includes(issue) && ' ✅'}
-                          </label>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No issues available</p>
-                    )}
+        {singleDoors.length > 0 ? (
+          singleDoors.map((singleDoor) => (
+            <div className="col-md-6 mb-4" key={singleDoor._id}>
+              <div className="card h-100">
+                <div className="card-body d-flex align-items-center justify-content-between">
+                  <div>
+                    <h5 className="card-title">{singleDoor.name}</h5>
+                    <p className="card-text">Type: {singleDoor.fridgeType}</p>
+                    <p className="card-text">Base Price: ₹{singleDoor.price}</p>
+                    <div className="form-group">
+                      {singleDoor.doorIssues && singleDoor.doorIssues.length > 0 ? (
+                        singleDoor.doorIssues.map((issue, issueIndex) => (
+                          <div className="form-check" key={issueIndex}>
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              checked={selectedSingleDoorIssues[singleDoor._id]?.includes(issue) || false}
+                              onChange={() => handleIssueChange(singleDoor._id, issue, 'Single Door')}
+                              id={`single-door-issue-${singleDoor._id}-${issueIndex}`}
+                            />
+                            <label
+                              className={`form-check-label ${selectedSingleDoorIssues[singleDoor._id]?.includes(issue) ? 'text-primary' : ''}`}
+                              htmlFor={`single-door-issue-${singleDoor._id}-${issueIndex}`}
+                            >
+                              {issue} {selectedSingleDoorIssues[singleDoor._id]?.includes(issue) && ' ✅'}
+                            </label>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No issues available</p>
+                      )}
+                    </div>
                   </div>
+                  <img
+                    src={`${process.env.PUBLIC_URL}${singleDoor.image}`}
+                    alt={singleDoor.name}
+                    style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                  />
                 </div>
-
-                {/* Image Section */}
-                <img
-                  src={`${process.env.PUBLIC_URL}/images/fridge-${singledoor.id}.jpg`} // Assuming images follow this naming convention
-                  alt={singledoor.name}
-                  style={{
-                    height: '250px',
-                    width: '200px',
-                    objectFit: 'cover',
-                    marginLeft: '20px',
-                  }}
-                />
-              </div>
-
-              {/* Add to Cart and Estimated Time */}
-              <div className="d-flex justify-content-between align-items-center p-2">
-                <Button
-                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
-                  onClick={() => handleAddToCart(singledoor)}
-                >
-                  Add to Cart
-                </Button>
-                <span className="text-muted">Estimated Time: {singledoor.time}</span>
-              </div>
-
-              {/* Price Calculation */}
-              <div className="card-footer text-center bg-light p-2">
-                <large className="text-muted">
-                  Total Price: ₹{calculateFridgeTotalPrice(singledoor.id)}
-                </large>
+                <div className="d-flex justify-content-between align-items-center p-2">
+                  <Button
+                    style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                    onClick={() => handleFridgeBooking(singleDoor)}
+                  >
+                    Add to Cart
+                  </Button>
+                  <span className="text-muted">Estimated Time: {singleDoor.time}</span>
+                </div>
+                <div className="card-footer text-center bg-light p-2">
+                  <large className="text-muted">
+                    Total Price: ₹{calculateTotalPrice(singleDoor._id, 'Single Door')}
+                  </large>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p>No Single Door Refrigerators Available</p>
+        )}
       </div>
-      <h3> Double Door Issues</h3>
+
+      {/* Double Door Issues Section */}
+      <h3>Double Door Issues</h3>
       <div className="row">
-        {doubledoors.map((doubledoor) => (
-          <div className="col-md-6 mb-4" key={doubledoor.id}>
-            <div className="card h-100">
-              <div className="card-body d-flex align-items-center justify-content-between">
-                {/* Text Section */}
-                <div>
-                  <h5 className="card-title">{doubledoor.name}</h5>
-                  <p className="card-text">Type: {doubledoor.type}</p>
-                  <p className="card-text">Base Price: ₹{doubledoor.price}</p>
-                  <div className="form-group">
-                    {doubledoor.doorissues && doubledoor.doorissues.length > 0 ? (
-                      doubledoor.doorissues.map((issue, issueIndex) => (
-                        <div className="form-check" key={issueIndex}>
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) || false}
-                            onChange={() => handleDoubleDoorIssueChange(doubledoor.id, issue)}
-                            id={`double-door-issue-${doubledoor.id}-${issueIndex}`}
-                          />
-                          <label
-                            className={`form-check-label ${selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) ? 'text-primary' : ''}`}
-                            htmlFor={`double-door-issue-${doubledoor.id}-${issueIndex}`}
-                          >
-                            {issue}
-                            {selectedDoubleDoorIssues[doubledoor.id]?.includes(issue) && ' ✅'}
-                          </label>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No issues available</p>
-                    )}
+        {doubleDoors.length > 0 ? (
+          doubleDoors.map((doubleDoor) => (
+            <div className="col-md-6 mb-4" key={doubleDoor._id}>
+              <div className="card h-100">
+                <div className="card-body d-flex align-items-center justify-content-between">
+                  <div>
+                    <h5 className="card-title">{doubleDoor.name}</h5>
+                    <p className="card-text">Type: {doubleDoor.fridgeType}</p>
+                    <p className="card-text">Base Price: ₹{doubleDoor.price}</p>
+                    <div className="form-group">
+                      {doubleDoor.doorIssues && doubleDoor.doorIssues.length > 0 ? (
+                        doubleDoor.doorIssues.map((issue, issueIndex) => (
+                          <div className="form-check" key={issueIndex}>
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              checked={selectedDoubleDoorIssues[doubleDoor._id]?.includes(issue) || false}
+                              onChange={() => handleIssueChange(doubleDoor._id, issue, 'Double Door')}
+                              id={`double-door-issue-${doubleDoor._id}-${issueIndex}`}
+                            />
+                            <label
+                              className={`form-check-label ${selectedDoubleDoorIssues[doubleDoor._id]?.includes(issue) ? 'text-primary' : ''}`}
+                              htmlFor={`double-door-issue-${doubleDoor._id}-${issueIndex}`}
+                            >
+                              {issue} {selectedDoubleDoorIssues[doubleDoor._id]?.includes(issue) && ' ✅'}
+                            </label>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No issues available</p>
+                      )}
+                    </div>
                   </div>
+                  <img
+                    src={`${process.env.PUBLIC_URL}${doubleDoor.image}`}
+                    alt={doubleDoor.name}
+                    style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                  />
                 </div>
-
-                {/* Image Section */}
-                <img
-                  src={`${process.env.PUBLIC_URL}/images/fridge-${doubledoor.id}.jpg`} // Assuming images follow this naming convention
-                  alt={doubledoor.name}
-                  style={{
-                    height: '250px',
-                    width: '200px',
-                    objectFit: 'cover',
-                    marginLeft: '20px',
-                  }}
-                />
-              </div>
-
-              {/* Add to Cart and Estimated Time */}
-              <div className="d-flex justify-content-between align-items-center p-2">
-                <Button
-                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
-                  onClick={() => handleAddToCart(doubledoor)}
-                >
-                  Add to Cart
-                </Button>
-                <span className="text-muted">Estimated Time: {doubledoor.time}</span>
-              </div>
-
-              {/* Price Calculation */}
-              <div className="card-footer text-center bg-light p-2">
-                <large className="text-muted">
-                  Total Price: ₹{calculateDoubleDoorTotalPrice(doubledoor.id)}
-                </large>
+                <div className="d-flex justify-content-between align-items-center p-2">
+                  <Button
+                    style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                    onClick={() => handleFridgeBooking(doubleDoor)}
+                  >
+                    Add to Cart
+                  </Button>
+                  <span className="text-muted">Estimated Time: {doubleDoor.time}</span>
+                </div>
+                <div className="card-footer text-center bg-light p-2">
+                  <large className="text-muted">
+                    Total Price: ₹{calculateTotalPrice(doubleDoor._id, 'Double Door')}
+                  </large>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p>No Double Door Refrigerators Available</p>
+        )}
       </div>
-      <h3> Side-by-side Door Issues</h3>
+
+      {/* Side-by-Side Door Issues Section */}
+      <h3>Side-By-Side Door Issues</h3>
       <div className="row">
-        {sidebysidedoors.map((sidebysidedoor) => (
-          <div className="col-md-6 mb-4" key={sidebysidedoor.id}>
-            <div className="card h-100">
-              <div className="card-body d-flex align-items-center justify-content-between">
-                {/* Text Section */}
-                <div>
-                  <h5 className="card-title">{sidebysidedoor.name}</h5>
-                  <p className="card-text">Type: {sidebysidedoor.type}</p>
-                  <p className="card-text">Base Price: ₹{sidebysidedoor.price}</p>
-                  <div className="form-group">
-                    {sidebysidedoor.doorissues && sidebysidedoor.doorissues.length > 0 ? (
-                      sidebysidedoor.doorissues.map((issue, issueIndex) => (
-                        <div className="form-check" key={issueIndex}>
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) || false}
-                            onChange={() => handleSideBySideDoorIssueChange(sidebysidedoor.id, issue)}
-                            id={`sidebyside-door-issue-${sidebysidedoor.id}-${issueIndex}`}
-                          />
-                          <label
-                            className={`form-check-label ${selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) ? 'text-primary' : ''}`}
-                            htmlFor={`sidebyside-door-issue-${sidebysidedoor.id}-${issueIndex}`}
-                          >
-                            {issue}
-                            {selectedSideBySideDoorIssues[sidebysidedoor.id]?.includes(issue) && ' ✅'}
-                          </label>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No issues available</p>
-                    )}
+        {sideBySideDoors.length > 0 ? (
+          sideBySideDoors.map((sideBySideDoor) => (
+            <div className="col-md-6 mb-4" key={sideBySideDoor._id}>
+              <div className="card h-100">
+                <div className="card-body d-flex align-items-center justify-content-between">
+                  <div>
+                    <h5 className="card-title">{sideBySideDoor.name}</h5>
+                    <p className="card-text">Type: {sideBySideDoor.fridgeType}</p>
+                    <p className="card-text">Base Price: ₹{sideBySideDoor.price}</p>
+                    <div className="form-group">
+                      {sideBySideDoor.doorIssues && sideBySideDoor.doorIssues.length > 0 ? (
+                        sideBySideDoor.doorIssues.map((issue, issueIndex) => (
+                          <div className="form-check" key={issueIndex}>
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              checked={selectedSideBySideDoorIssues[sideBySideDoor._id]?.includes(issue) || false}
+                              onChange={() => handleIssueChange(sideBySideDoor._id, issue, 'Double Door')}
+                              id={`side-by-side-door-issue-${sideBySideDoor._id}-${issueIndex}`}
+                            />
+                            <label
+                              className={`form-check-label ${selectedSideBySideDoorIssues[sideBySideDoor._id]?.includes(issue) ? 'text-primary' : ''}`}
+                              htmlFor={`side-by-side-door-issue-${sideBySideDoor._id}-${issueIndex}`}
+                            >
+                              {issue} {selectedSideBySideDoorIssues[sideBySideDoor._id]?.includes(issue) && ' ✅'}
+                            </label>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No issues available</p>
+                      )}
+                    </div>
                   </div>
+                  <img
+                    src={`${process.env.PUBLIC_URL}${sideBySideDoor.image}`}
+                    alt={sideBySideDoor.name}
+                    style={{ height: '250px', width: '200px', objectFit: 'cover', marginLeft: '20px' }}
+                  />
                 </div>
-
-                {/* Image Section */}
-                <img
-                  src={`${process.env.PUBLIC_URL}/images/fridge-${sidebysidedoor.id}.jpg`} // Assuming images follow this naming convention
-                  alt={sidebysidedoor.name}
-                  style={{
-                    height: '250px',
-                    width: '200px',
-                    objectFit: 'cover',
-                    marginLeft: '20px',
-                  }}
-                />
-              </div>
-
-              {/* Add to Cart and Estimated Time */}
-              <div className="d-flex justify-content-between align-items-center p-2">
-                <Button
-                  style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
-                  onClick={() => handleAddToCart(sidebysidedoor)}
-                >
-                  Add to Cart
-                </Button>
-                <span className="text-muted">Estimated Time: {sidebysidedoor.time}</span>
-              </div>
-
-              {/* Price Calculation */}
-              <div className="card-footer text-center bg-light p-2">
-                <large className="text-muted">
-                  Total Price: ₹{calculateSideBySideTotalPrice(sidebysidedoor.id)}
-                </large>
+                <div className="d-flex justify-content-between align-items-center p-2">
+                  <Button
+                    style={{ backgroundColor: '#007bff', borderColor: '#007bff' }}
+                    onClick={() => handleFridgeBooking(sideBySideDoor)}
+                  >
+                    Add to Cart
+                  </Button>
+                  <span className="text-muted">Estimated Time: {sideBySideDoor.time}</span>
+                </div>
+                <div className="card-footer text-center bg-light p-2">
+                  <large className="text-muted">
+                    Total Price: ₹{calculateTotalPrice(sideBySideDoor._id, 'Double Door')}
+                  </large>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p>No side By Side Door Refrigerators Available</p>
+        )}
       </div>
-    
     </div>
+
 
     {/* chat Bot*/}
     {/* <div> */}

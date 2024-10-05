@@ -17,7 +17,10 @@ import cartRoutes from './routes/cart.route.js';
 import paymentRoutes from './routes/payment.route.js';
 import washingMachineRepairRoutes from './routes/washingMachineRepair.route.js';
 import washingMachineInstallationRoutes from './routes/washingMachineInstallation.route.js';
-import washingMachineUninstallationRoutes from './routes/washingMachineUninstallation.route.js'
+import washingMachineUninstallationRoutes from './routes/washingMachineUninstallation.route.js';
+import singleDoor from './routes/singledoor.route.js';
+import doubleDoor from './routes/doubledoor.route.js';
+import sideDoor from './routes/sidedoor.route.js';
 
 const app = express();
 
@@ -39,6 +42,9 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/wrepairs', washingMachineRepairRoutes);
 app.use('/api/winstallations', washingMachineInstallationRoutes);
 app.use('/api/wuninstallations', washingMachineUninstallationRoutes);
+app.use('/api/singledoor', singleDoor);
+app.use('/api/doubledoor', doubleDoor);
+app.use('/api/sidedoor', sideDoor);
 
 // Notifications route (for example)
 app.get('/api/notifications', (req, res) => {

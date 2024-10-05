@@ -50,7 +50,6 @@ export const addToCart = async (req, res) => {
   }
 };
 
-
 // Get all cart items for a specific user by user ID
 export const getCartItemsByUserId = async (req, res) => {
   try {
