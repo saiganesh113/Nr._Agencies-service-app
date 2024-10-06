@@ -111,53 +111,85 @@ export const removeFromCart = async (req, res) => {
 // Add a CartItem
 export const addCartItem = async (req, res) => {
   try {
-    const { serviceId, name, price, technology, warranty, issues, estimatedTime, quantity, userId } = req.body;
-    const cartItem = new CartItem({
-      serviceType: req.body.serviceType,
-      serviceId,
-      name,
-      price,
-      technology,
-      warranty,
-      issues,
-      estimatedTime,
-      quantity,
-      userId,
-    });
-    await cartItem.save();
-    res.status(201).json({ message: 'Item added to cart', cartItem });
+      const { userId, cartItems } = req.body; // Expecting cartItems array in the request body
+
+      // Check if cartItems is provided
+      if (!cartItems || !Array.isArray(cartItems)) {
+          return res.status(400).json({ error: 'cartItems must be an array' });
+      }
+
+      const savedItems = [];
+
+      for (const item of cartItems) {
+          const { name, price, technology, warranty, issues, estimatedTime, quantity } = item;
+
+          // Calculate total price based on issues and price
+          const totalPrice = (price * quantity) + (issues.length * 99); // Assuming 99 is the price per issue
+
+          // Create a new CartItem object
+          const cartItem = new CartItem({
+              name,
+              price,
+              technology,
+              warranty,
+              issues,
+              estimatedTime,
+              quantity,
+              userId,
+              totalPrice
+          });
+
+          // Save the CartItem to the database
+          const savedItem = await cartItem.save();
+          savedItems.push(savedItem);
+      }
+
+      res.status(201).json({ message: 'Items added to cart', savedItems });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to add item to cart' });
+      console.error('Error adding item to cart:', error);
+      res.status(500).json({ error: 'Failed to add items to cart' });
   }
 };
 
-// Get all CartItems for a user
+// Get all CartItems for a specific user
 export const getCartItems = async (req, res) => {
   try {
-    const items = await CartItem.find({ userId: req.user._id }).populate('serviceId');
-    res.status(200).json(items);
+      const userId = req.user._id; // Assuming you have user authentication middleware that attaches req.user
+
+      // Find all cart items for the logged-in user
+      const items = await CartItem.find({ userId });
+      res.status(200).json(items);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      console.error('Error retrieving cart items:', error);
+      res.status(500).json({ message: 'Failed to retrieve cart items' });
   }
 };
 
 // Update a CartItem
 export const updateCartItem = async (req, res) => {
   try {
-    const updatedItem = await CartItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json(updatedItem);
+      const cartItemId = req.params.id;
+      const updates = req.body;
+
+      // Find and update the CartItem by its ID
+      const updatedItem = await CartItem.findByIdAndUpdate(cartItemId, updates, { new: true });
+      res.status(200).json({ message: 'Cart item updated', updatedItem });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      console.error('Error updating cart item:', error);
+      res.status(500).json({ message: 'Failed to update cart item' });
   }
 };
 
 // Delete a CartItem
 export const deleteCartItem = async (req, res) => {
   try {
-    await CartItem.findByIdAndDelete(req.params.id);
-    res.status(204).send();
+      const cartItemId = req.params.id;
+
+      // Find and delete the CartItem by its ID
+      await CartItem.findByIdAndDelete(cartItemId);
+      res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      console.error('Error deleting cart item:', error);
+      res.status(500).json({ message: 'Failed to delete cart item' });
   }
 };

@@ -1,48 +1,23 @@
-// src/model/cartItem.model.js
 import mongoose from 'mongoose';
 
 // Define the CartItem schema
 const cartItemSchema = new mongoose.Schema({
-  serviceType: {
-    type: String,
-    required: true, // 'repair', 'installation', or 'uninstallation'
-  },
-  serviceId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'Service', // Reference to the Service model
-  },
-  name: {
-    type: String,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  technology: {
-    type: String,
-  },
-  warranty: {
-    type: String,
-  },
-  issues: {
-    type: [String], // Array of issues for repair items
-  },
-  estimatedTime: {
-    type: String,
-  },
-  quantity: {
-    type: Number,
-    default: 1, // Default quantity is 1
-  },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'User', // Reference to the User model
-  },
-}, {timestamps: true,}
-);
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    technology: { type: String },
+    warranty: { type: String },
+    issues: { type: [String] }, // Array of issues
+    userid: {
+        type: String,
+        required: true,
+        ref: 'Profile'
+    },
+    totalPrice: { type: Number, required: true },
+    quantity: { type: Number, required: true }, // Ensure quantity is accounted for
+    estimatedTime: { type: String }
+}, {
+    timestamps: true // This will automatically create createdAt and updatedAt fields
+});
 
-// Create the CartItem model
+// Create and export the CartItem model
 export default mongoose.model('CartItem', cartItemSchema);

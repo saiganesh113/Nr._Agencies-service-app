@@ -13,6 +13,7 @@ import ProfilePage from "views/examples/ProfilePage.js";
 import UserDashboard from "components/Navbars/UserDashboard";
 import SignUp from "views/index-sections/SignUp";
 import TechnicianDashboard from "components/Navbars/TechnicianDashboard";
+import ServicePage from "views/index-sections/servicespage";
 
 // Importing UserDashboard CSS properly
 import "components/Navbars/UserDashboard.css";  // Import CSS without assigning it to a variable
@@ -32,6 +33,7 @@ root.render(
       <Route path="/userdashboard" element={<UserDashboard />} />
       <Route path="/techdashboard" element={<TechnicianDashboard />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/homeservices" element={<ServicePage />} />
 
       {/* Redirect all other paths to /index */}
       <Route path="*" element={<Navigate to="/index" replace />} />

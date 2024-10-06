@@ -26,7 +26,6 @@ const cartSchema = new mongoose.Schema({
     slotBookedTime: Date,
     technology: String,
     time: String,
-    issues: String,
     totalPrice: {
         type: Number,
         required: true

@@ -55,7 +55,7 @@ function IndexNavbar() {
         <Container>
           <div className="navbar-translate">
             <NavbarBrand href="" id="navbar-brand">
-              NR Services
+              Sree Teq’s Services
             </NavbarBrand>
             <UncontrolledTooltip target="#navbar-brand">
               Designed & Coded by USCL
