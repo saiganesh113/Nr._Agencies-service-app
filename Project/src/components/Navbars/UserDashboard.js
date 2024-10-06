@@ -2487,9 +2487,9 @@ const fridgePricePerIssue = 99;
           <div className="col-md-3">
             <h5>Company</h5>
             <ol className="list-unstyled">
-              <li><a href="#">About us</a></li>
-              <li><a href="#">Terms & conditions</a></li>
-              <li><a href="#">Privacy policy</a></li>
+              <li><a href="/login-page">About us</a></li>
+              <li><a href="/Sree teq's.Terms and Conditions.pdf">Terms & conditions</a></li>
+              <li><a href="/Sree Teq's.Privacy Policy.pdf">Privacy policy</a></li>
               <li><a href="#">Anti-discrimination policy</a></li>
               <li><a href="#">NR impact</a></li>
               <li><a href="#">Careers</a></li>
@@ -2499,9 +2499,8 @@ const fridgePricePerIssue = 99;
             <h5>For customers</h5>
             <ol className="list-unstyled">
               <li><a href="#">NR reviews</a></li>
-              <li><a href="#">Categories near you</a></li>
               <li><a href="#">Blog</a></li>
-              <li><a href="#">Contact us</a></li>
+              <li><a href="mailto:kingdev376@gmail.com">Contact us</a></li>
             </ol>
           </div>
           <div className="col-md-3">

@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  Button,
   Collapse,
   DropdownToggle,
   DropdownMenu,
@@ -81,6 +80,15 @@ function IndexNavbar() {
                   <i className="now-ui-icons users_circle-08"></i>
                   <p>About</p>
                 </NavLink>
+              </NavItem>
+              <NavItem>
+                <a
+                  href="mailto:kingdev376@gmail.com"
+                  className="nav-link"
+                >
+                  <i className="now-ui-icons ui-1_email-85"></i>
+                  <p>Contact Us</p>
+                </a>
               </NavItem>
               <NavItem>
                 <NavLink
