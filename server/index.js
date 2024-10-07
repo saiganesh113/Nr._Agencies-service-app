@@ -21,6 +21,9 @@ import washingMachineUninstallationRoutes from './routes/washingMachineUninstall
 import singleDoor from './routes/singledoor.route.js';
 import doubleDoor from './routes/doubledoor.route.js';
 import sideDoor from './routes/sidedoor.route.js';
+import SuperAdmin from './routes/superAdmin.route.js';
+import Email from './routes/email.route.js'
+
 
 const app = express();
 
@@ -45,6 +48,8 @@ app.use('/api/wuninstallations', washingMachineUninstallationRoutes);
 app.use('/api/singledoor', singleDoor);
 app.use('/api/doubledoor', doubleDoor);
 app.use('/api/sidedoor', sideDoor);
+app.use('/api/superadmin', SuperAdmin);
+app.use('/api/email', Email);
 
 // Notifications route (for example)
 app.get('/api/notifications', (req, res) => {

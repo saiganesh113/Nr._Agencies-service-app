@@ -44,7 +44,6 @@ const TechnicianDashboard = ({techid, userId }) => {
       try {
         const token = localStorage.getItem('tech_token'); // Retrieve token
         const techid = localStorage.getItem('tech_id');   // Retrieve tech_id
-        console.log('Fetching technician data with techid:', techid); // Debugging log
     
         if (!token || !techid) {
           throw new Error('Token or TechID not found. Please log in again.');
@@ -71,7 +70,6 @@ const TechnicianDashboard = ({techid, userId }) => {
         });
     
       } catch (error) {
-        console.error('Failed to load technician data:', error);
         setError(`Failed to load technician data: ${error.message}`); // More informative error
       } finally {
         setLoading(false);
@@ -90,7 +88,6 @@ const TechnicianDashboard = ({techid, userId }) => {
       const fetchOrders = async () => {
         try {
           const response = await axios.get(`http://localhost:5000/api/payment/users`);
-          console.log('Orders response:', response.data); // Log the response data
           setOrders(response.data.data || []); // Use response.data.data instead of response.data
         } catch (error) {
           console.error('Error fetching orders:', error);

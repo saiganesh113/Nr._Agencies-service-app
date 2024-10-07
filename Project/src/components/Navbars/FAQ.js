@@ -95,9 +95,9 @@ const FAQ = () => {
         <div className="col-md-4">
           <br />
           <h5>AC Repair & Service Near Me</h5>
-          <p>Find AC Repair & Service near you.</p>
+          <p>Find AC, Fridge and washing Machine Repair & Service near you.</p>
           <h5>You are here</h5>
-          <p>Home / AC Repair & Service</p>
+          <p>Home / AC, Fridge and washing Machine Repair & Service</p>
         </div>
       </div>
     </div>

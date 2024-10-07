@@ -62,6 +62,8 @@ const UserDashboard = () => {
   const [error, setError] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [cartHistory, setCartHistory] = useState([]);
   const navigate = useNavigate();
   // ... other code
    
@@ -148,9 +150,6 @@ useEffect(() => {
     const userId = localStorage.getItem('user_id');
     const token = localStorage.getItem('user_token');
 
-    console.log('UserID:', userId);
-    console.log('Token:', token);
-
     if (!token) {
       setError('Token is missing. Please log in.');
       navigate('/login');
@@ -159,7 +158,6 @@ useEffect(() => {
 
     try {
       const decodedToken = jwtDecode(token);
-      console.log('Decoded Token:', decodedToken);
 
       // Ensure the token structure matches your backend's expectations
       if (!decodedToken.userid) {
@@ -173,15 +171,11 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log('API Response:', response);
-
         const userDetails = response.data;
 
         if (!userDetails) {
           throw new Error('User details are not available.');
         }
-
-        console.log('User Details:', userDetails);
 
         setPersonalDetails({
           userid: userDetails.userid || '',
@@ -194,7 +188,6 @@ useEffect(() => {
         navigate('/login');
       }
     } catch (error) {
-      console.error('Failed to load user data:', error);
       if (error.response && error.response.status === 401) {
         navigate('/login');
       }
@@ -237,10 +230,6 @@ const handleLogout = () => {
       ]);
   
       // Log the fetched data for debugging
-      console.log('Services Data:', servicesResponse.data);
-      console.log('Repairs Data:', repairsResponse.data);
-      console.log('Installations Data:', installationsResponse.data);
-      console.log('Notifications Data:', notificationsResponse.data);
   
       // Set state with the fetched data
       setServices(servicesResponse.data);  
@@ -281,7 +270,6 @@ const handleLogout = () => {
         return total + itemPrice;
       }, 0);
   
-      console.log('Subtotal Calculated:', subtotal);
   
       // Apply the discount of ₹100 for second item onwards
       const discount = cart.length > 1 ? 100 : 0;
@@ -289,7 +277,6 @@ const handleLogout = () => {
       // Calculate the final total amount after discount
       const totalAmount = subtotal - discount;
   
-      console.log('Total Amount Calculated (after discount):', totalAmount);
   
       if (totalAmount <= 0) {
         throw new Error('Total amount must be greater than zero');
@@ -320,8 +307,6 @@ const handleLogout = () => {
             cart,
             transactionId: razorpayPaymentId,  // Pass Razorpay payment ID to backend
           });
-  
-          console.log('Backend Payment response:', paymentResponse.data);
   
           setNotifications(prevNotifications => [
             ...prevNotifications,
@@ -505,6 +490,36 @@ const handleLogout = () => {
   };
 
 
+  const handleShowHistory = async () => {
+    try {
+        const userid = localStorage.getItem('user_id');
+        if (!userid) {
+            throw new Error('Userid is required to fetch cart history');
+        }
+
+        const response = await axios.get(`http://localhost:5000/api/payment/user/${userid}`);
+        if (response.data.status === 'success') {
+            const cartHistory = response.data.data.map((payment) => {
+                return {
+                    type: payment.cart[0].name,
+                    price: payment.amount,
+                    discount: payment.cart.length > 1 ? 100 : 0,
+                    time: payment.cart[0].time,
+                    slotBookedTime: payment.cart[0].slotBookedTime,
+                    slotBookedDate: payment.cart[0].slotBookedDate,
+                };
+            });
+            setCartHistory(cartHistory);
+        } else {
+            console.error('Error fetching cart history:', response.data.message);
+        }
+    } catch (error) {
+        console.error('Error fetching cart history:', error.response ? error.response.data : error.message);
+    } finally {
+        setShowHistory(!showHistory);
+    }
+};
+
   const reviews = [
     { name: 'Saurabh', date: 'July 2024', rating: 5, comment: 'Very nice service' },
     { name: 'Bharat', date: 'July 2024', rating: 5, comment: 'Very nice service and polite nature' },
@@ -643,16 +658,13 @@ const handleRemoveservicefromCart = (selectedServiceId) => {
 };
 
  
-const fridgePricePerIssue = 99;
+
   // State for storing fridge data fetched from the backend
   const [singleDoors, setSingleDoors] = useState([]);
   const [doubleDoors, setDoubleDoors] = useState([]);
   const [sideBySideDoors, setSideBySideDoors] = useState([]);
 
   // State for selected issues
-  const [selectedSingleDoorIssues, setSelectedSingleDoorIssues] = useState({});
-  const [selectedDoubleDoorIssues, setSelectedDoubleDoorIssues] = useState({});
-  const [selectedSideBySideDoorIssues, setSelectedSideBySideDoorIssues] = useState({});
 
   // Fetch fridge data from backend
   useEffect(() => {
@@ -694,33 +706,6 @@ const fridgePricePerIssue = 99;
     fetchsideBySideDoors();
   }, []);
   // Handle issue changes for different fridge types
-  const handleIssueChange = (id, issue, type) => {
-    const setSelectedIssues = {
-      'Single Door': setSelectedSingleDoorIssues,
-      'Double Door': setSelectedDoubleDoorIssues,
-      'Side-By-Side': setSelectedSideBySideDoorIssues,
-    }[type];
-
-    setSelectedIssues((prev) => {
-      const updatedIssues = prev[id] ? [...prev[id]] : [];
-      if (updatedIssues.includes(issue)) {
-        return { ...prev, [id]: updatedIssues.filter((i) => i !== issue) };
-      } else {
-        return { ...prev, [id]: [...updatedIssues, issue] };
-      }
-    });
-  };
-
-  // Calculate the total price based on selected issues for each fridge type
-  const calculateTotalPrice = (fridgeId, type) => {
-    const selectedIssues = {
-      'Single Door': selectedSingleDoorIssues[fridgeId],
-      'Double Door': selectedDoubleDoorIssues[fridgeId],
-      'Side-By-Side': selectedSideBySideDoorIssues[fridgeId],
-    }[type] || [];
-    return selectedIssues.length * fridgePricePerIssue;
-  };
-
   
   // Example of handling cart item booking
   const handleFridgeBooking = (fridge) => {
@@ -729,88 +714,6 @@ const fridgePricePerIssue = 99;
     setShowSloterModal(true); // Open slot booking modal
   };
   
-  
-  const handleRemovefridgefromCart = (fridgeId) => {
-    setCart((prevCart) => prevCart.filter((fridge) => fridge._id !== fridgeId));
-  };
-  
-  const handleConformBooking = async () => {
-    try {
-        // Retrieve user ID from localStorage
-        const userid = localStorage.getItem('user_id');
-        if (!userid) {
-            setError('User ID not found. Please log in again.');
-            return;
-        }
-
-        // Validate all fields are provided
-        if (!selectedDate || !selectedTime || !address || !coordinatesInput) {
-            setError('All fields are required.');
-            return;
-        }
-
-        // Parse date and time to create a valid JavaScript Date object
-        const [day, month, year] = selectedDate.split('-').map(Number);
-        let [time, modifier] = selectedTime.split(' ');
-        let [hour, minute] = time.split(':').map(Number);
-
-        if (modifier === 'PM' && hour < 12) {
-            hour += 12;
-        } else if (modifier === 'AM' && hour === 12) {
-            hour = 0;
-        }
-
-        const slotBookedTime = new Date(year, month - 1, day, hour, minute);
-        if (isNaN(slotBookedTime.getTime())) {
-            setError('Invalid date or time. Please try again.');
-            return;
-        }
-
-        // Parse item price and ensure it's a valid number
-        const itemPrice = typeof currentItem.price === 'number'
-            ? currentItem.price
-            : parseFloat(currentItem?.price?.replace(/[^0-9.-]+/g, '')) || 0;
-
-        const itemTotalPrice = itemPrice;
-
-        // Extract and validate latitude and longitude from coordinates input
-        const coordinates = coordinatesInput.split(',').map(Number); // Extracting lat, lon
-        if (coordinates.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) {
-            setError('Invalid coordinates. Please enter valid latitude and longitude.');
-            return;
-        }
-
-        // Prepare cart item to be sent to the backend
-        const cartItem = {
-            ...currentItem,
-            userid: personalDetails.userid,
-            username: personalDetails.Name,
-            mobileNumber: personalDetails.mobileNumber,
-            slotBookedTime: slotBookedTime.toISOString(),
-            slotBookedDate: selectedDate,
-            estimatedTime: currentItem.estimatedTime || 'N/A',
-            totalPrice: itemTotalPrice,
-            address,
-            coordinates: { lat: coordinates[0], lon: coordinates[1] }
-        };
-
-        // Add the item to the local cart
-        const updatedCart = [...cart, cartItem];
-        setCart(updatedCart);
-
-        // Clear selected fields and hide slot modal, show cart modal
-        setSelectedDate('');
-        setSelectedTime('');
-        setShowSlotModal(false);
-        setShowCartModal(true);
-
-        // Send cart item to the backend
-        await axios.post('http://localhost:5000/api/carts', cartItem);
-    } catch (error) {
-        console.error('Error during booking process:', error);
-        setError('An error occurred during the booking process.');
-    }
-};
 
   return (
     <div className="container">
@@ -857,45 +760,99 @@ const fridgePricePerIssue = 99;
       
     {/* Cart Modal */}
     <Modal show={showCartModal} onHide={() => setShowCartModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Cart</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ul className="list-group">
-            {cart.map((item, index) => (
-              <li className="list-group-item d-flex justify-content-between align-items-center" key={item._id}>
-                <div>
-                  <strong>Type:</strong> {item.type}<br />
-                  <strong>Price:</strong> ₹{item.price}<br />
-                  <strong>Discount:</strong> ₹100 off 2nd item onwards<br />
-                  <strong>Estimated Time:</strong> {item.time || 'N/A'}<br />
-                  <strong>Slot Booked Time:</strong> {item.slotBookedTime ? new Date(item.slotBookedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}<br />
-                  <strong>Slot Booked Date:</strong> {item.slotBookedDate ? new Date(item.slotBookedDate).toLocaleDateString('en-GB') : 'N/A'}<br />
-                  <strong>Total Price:</strong> ₹{item.price}<br /> {/* Display original price */}
-                </div>
-                <Button variant="danger" onClick={() => handleRemoveFromCart(item._id)}>Remove</Button>
-              </li>
+    <Modal.Header closeButton>
+        <Modal.Title>Cart</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        <ul className="list-group">
+            {cart.map((item) => (
+                <li className="list-group-item d-flex justify-content-between align-items-center" key={item._id}>
+                    <div>
+                        <strong>Type:</strong> {item.type}<br />
+                        <strong>Price:</strong> ₹{item.price}<br />
+                        <strong>Discount:</strong> ₹100 off 2nd item onwards<br />
+                        <strong>Estimated Time:</strong> {item.time || 'N/A'}<br />
+                        <strong>Slot Booked Time:</strong> {item.slotBookedTime ? new Date(item.slotBookedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}<br />
+                        <strong>Slot Booked Date:</strong> {item.slotBookedDate ? new Date(item.slotBookedDate).toLocaleDateString('en-GB') : 'N/A'}<br />
+                        <strong>Total Price:</strong> ₹{item.price}<br />
+                    </div>
+                    <Button variant="danger" onClick={() => handleRemoveFromCart(item._id)}>Remove</Button>
+                </li>
             ))}
-          </ul>
-          <hr />
-          <div className="d-flex justify-content-between">
+        </ul>
+        <hr />
+        <div className="d-flex justify-content-between">
             <strong>Subtotal:</strong>
             <span>₹{cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0).toFixed(2)}</span>
-          </div>
-          <div className="d-flex justify-content-between">
+        </div>
+        <div className="d-flex justify-content-between">
             <strong>Discount Applied:</strong>
-            <span>₹{cart.length >= 2 ? 100 : 0}</span> {/* Apply ₹100 flat discount */}
-          </div>
-          <div className="d-flex justify-content-between">
+            <span>₹{cart.length >= 2 ? 100 : 0}</span>
+        </div>
+        <div className="d-flex justify-content-between">
             <strong>Total Amount:</strong>
             <span>₹{(cart.reduce((total, item) => total + (typeof item.price === 'number' ? item.price : parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0), 0) - (cart.length >= 2 ? 100 : 0)).toFixed(2)}</span>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCartModal(false)}>Close</Button>
-          <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
-        </Modal.Footer>
-    </Modal>
+        </div>
+
+        {showHistory && (
+            <div style={{ marginTop: '1rem' }}>
+                <h5>Cart History</h5>
+                {cartHistory.length === 0 ? (
+                    <p>No previous transactions.</p>
+                ) : (
+                    <ul style={{ display: 'flex', flexWrap: 'wrap', padding: 0, listStyleType: 'none' }}>
+                        {cartHistory.map((history, index) => (
+                            <li 
+                                style={{
+                                    flex: '0 0 48%', // Two items per row
+                                    marginBottom: '20px',
+                                    border: '1px solid #ddd',
+                                    padding: '10px',
+                                    borderRadius: '5px',
+                                    backgroundColor: '#f8f9fa'
+                                }} 
+                                key={index}
+                            >
+                                <strong>Transaction {index + 1}:</strong>
+                                <ul style={{ padding: 0, margin: 0 }}>
+                                    <li>
+                                        <strong>Type:</strong> {history.type}
+                                    </li>
+                                    <li>
+                                        <strong>Price:</strong> ₹{history.price}
+                                    </li>
+                                    <li>
+                                        <strong>Discount:</strong> ₹{history.discount}
+                                    </li>
+                                    <li>
+                                        <strong>Estimated Time:</strong> {history.time || 'N/A'}
+                                    </li>
+                                    <li>
+                                        <strong>Slot Booked Time:</strong> {history.slotBookedTime ? new Date(history.slotBookedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                    </li>
+                                    <li>
+                                        <strong>Slot Booked Date:</strong> {history.slotBookedDate ? new Date(history.slotBookedDate).toLocaleDateString('en-GB') : 'N/A'}
+                                    </li>
+                                    <li>
+                                        <strong>Total Price:</strong> ₹{history.price}
+                                    </li>
+                                </ul>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        )}
+
+    </Modal.Body>
+    <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowCartModal(false)}>Close</Button>
+        <Button variant="primary" onClick={handleProceedToPay}>Proceed to Pay</Button>
+        <Button variant="info" onClick={handleShowHistory}>
+            {showHistory ? "Hide History" : "Show History"}
+        </Button>
+    </Modal.Footer>
+</Modal>
 
     {/* Slot Booking Modal */}
     <Modal show={showSlotModal} onHide={() => setShowSlotModal(false)}>

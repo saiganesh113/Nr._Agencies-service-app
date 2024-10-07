@@ -127,7 +127,6 @@ function SignUp() {
 
     try {
       const response = await axios.post(endpoint, payload);
-      console.log(response.data);
       navigate("/login-page");
     } catch (error) {
       console.error("Error during signup:", error.response?.data?.message || "Signup failed");

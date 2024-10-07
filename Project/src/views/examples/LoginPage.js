@@ -64,8 +64,7 @@ function LoginPage() {
 
         // Make login request to backend
         const response = await axios.post(endpoint, payload);
-
-        console.log(response.data); // Log the response to inspect its structure
+ // Log the response to inspect its structure
 
         // Extract token and ID from the response
         const { token, user, techId } = response.data;

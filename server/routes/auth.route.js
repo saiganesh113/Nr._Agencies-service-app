@@ -20,13 +20,13 @@ router.post('/register-technician', registerTechnician);
 router.post('/login-technician', loginTechnician);
 router.get('/technician/:techid', protectRoute, getTechnician); // Updated here
 router.put('/technician/:techid', protectRoute, updateTechnician); // Updated here
-router.get('/technicians', protectRoute, getAllTechnicians);
+router.get('/technicians', getAllTechnicians);
 
 // User routes
 router.post('/register-user', registerUser);
 router.post('/login-user', loginUser);
 router.get('/user/:userid', protectRoute, getUser);
 router.put('/user/:userid', protectRoute, updateUser);
-router.get('/users', protectRoute, getAllUsers);
+router.get('/users', getAllUsers);
 
 export default router;
