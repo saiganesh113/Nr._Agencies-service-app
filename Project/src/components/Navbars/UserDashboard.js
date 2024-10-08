@@ -719,44 +719,126 @@ const handleRemoveservicefromCart = (selectedServiceId) => {
     <div className="container">
     <div>
     <br/> <br/> <br/> <br/>
-    <header className="fixed-header d-flex justify-content-between align-items-center py-3 px-4">
-        <div><Col xs={3} className="d-flex align-items-center">
-        <Button variant="link" onClick={handleProfileClick}>
-            <FontAwesomeIcon icon={faUserCircle} size="2x" />
-        </Button>
-        </Col></div>
-        <div className="location">
-        <FontAwesomeIcon icon={faMapMarkerAlt} size="lg" className="me-2" />
-        {location}
-        </div>
-        <div className="icons d-flex">
-        <Button variant="primary" onClick={() => setShowCartModal(true)}>
-          <i className="fa fa-shopping-cart"></i> ({cart.length})
-        </Button>
-        <div className="notifications-container">
-        <Button
-            variant="link"
-            onClick={() => setShowNotifications(!showNotifications)}
+    <header 
+  className="fixed-header d-flex justify-content-between align-items-center py-3 px-4"
+  style={{
+    width: '100%',
+    backgroundColor: '#fff',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    flexDirection: window.innerWidth <= 768 ? 'row' : 'row',
+    padding: '10px 15px',
+    justifyContent: 'space-between'
+  }}
+>
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    <Col xs={3} className="d-flex align-items-center">
+      <Button variant="link" onClick={handleProfileClick} style={{ padding: '0' }}>
+        <FontAwesomeIcon icon={faUserCircle} size="3x" />
+      </Button>
+    </Col>
+  </div>
+
+  <div 
+    className="location" 
+    style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      marginLeft: '5px', 
+      fontSize: '0.9rem' 
+    }}
+  >
+    <FontAwesomeIcon icon={faMapMarkerAlt} size="2x" className="me-2" />
+  </div>
+
+  <div 
+    className="icons d-flex"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: '10px',
+    }}
+  >
+    <Button 
+      variant="primary" 
+      onClick={() => setShowCartModal(true)}
+      style={{ 
+        padding: '5px 10px', 
+        fontSize: '0.9rem', 
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center'
+      }}
+    >
+      <i className="fa fa-shopping-cart" style={{ fontSize: '2rem', marginRight: '5px' }}></i>
+      <span>({cart.length})</span>
+    </Button>
+
+    <div 
+      className="notifications-container" 
+      style={{ 
+        position: 'relative', 
+        marginLeft: '10px',
+        display: 'flex',
+        alignItems: 'center'
+      }}
+    >
+      <Button
+        variant="link"
+        onClick={() => setShowNotifications(!showNotifications)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0'
+        }}
+      >
+        <FontAwesomeIcon icon={faBell} size="3x" />
+        <Badge 
+          bg="secondary" 
+          style={{
+            position: 'absolute',
+            top: '0',
+            right: '-10px',
+            fontSize: '0.7rem',
+            borderRadius: '50%',
+            padding: '2px 5px'
+          }}
         >
-            <FontAwesomeIcon icon={faBell} size="2x"/>
-            <Badge bg="secondary" >{notifications.length}</Badge>
-        </Button>
-        {showNotifications && (
-            <div className="notifications-dropdown">
-            {notifications.length === 0 ? (
-                <div>No notifications</div>
-            ) : (
-                notifications.map(notification => (
-                <div key={notification.id} className="notification-item">
-                    {notification.message}
-                </div>
-                ))
-            )}
-            </div>
-        )}
+          {notifications.length}
+        </Badge>
+      </Button>
+
+      {showNotifications && (
+        <div
+          className="notifications-dropdown"
+          style={{
+            position: 'absolute',
+            top: '40px',
+            right: '0',
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            width: '200px',
+            padding: '10px',
+            zIndex: 1
+          }}
+        >
+          {notifications.length === 0 ? (
+            <div>No notifications</div>
+          ) : (
+            notifications.map(notification => (
+              <div key={notification.id} className="notification-item">
+                {notification.message}
+              </div>
+            ))
+          )}
         </div>
-      </div>
-      </header>
+      )}
+    </div>
+  </div>
+</header>
+
       
     {/* Cart Modal */}
     <Modal show={showCartModal} onHide={() => setShowCartModal(false)}>
