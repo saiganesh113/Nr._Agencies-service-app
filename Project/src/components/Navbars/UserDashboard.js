@@ -353,6 +353,8 @@ const handleLogout = () => {
     doc.text(`User ID: ${userid}`, 10, yPos);
     const transactionId = `${new Date().toISOString().replace(/[^0-9]/g, "")}`;
     doc.text(`Transaction ID: ${transactionId}`, 10, yPos + 10);
+    
+    yPos += 20;
     // Add any slot details here if available for each item:
     cart.forEach((item) => {
       if (item.slotBookedDate) {
@@ -364,7 +366,7 @@ const handleLogout = () => {
     });
   
     // Add space before table header
-    yPos += 20;
+    yPos += 30;
   
     // Add the table header for item description
     doc.setFontSize(14);
@@ -385,7 +387,7 @@ const handleLogout = () => {
     });
   
     // Add space before subtotal and other totals
-    yPos += 20;
+    yPos += 10;
   
     // Add subtotal, discount, and total amount
     doc.text(`Subtotal: ₹${subtotal}`, 100, yPos);
@@ -394,7 +396,7 @@ const handleLogout = () => {
     doc.text(`Total Amount: ₹${totalAmount}`, 100, yPos + 20);
   
     // Add space before footer
-    yPos += 20;
+    yPos += 40;
   
     // Add footer with user address
     doc.setFontSize(10);
