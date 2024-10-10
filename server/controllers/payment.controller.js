@@ -3,17 +3,21 @@ import Payment from '../models/payment.model.js'; // Adjust path if necessary
 // POST: Process Payment
 export const processPayment = async (req, res) => {
   try {
-    const { userid, amount, address, cart, transactionId } = req.body; // transactionId from frontend
+    const { userid, amount, address, cart } = req.body; // Remove transactionId from frontend
 
-    if (!userid || !amount || !address || !cart || cart.length === 0 || !transactionId) {
+    if (!userid || !amount || !address || !cart || cart.length === 0) {
       return res.status(400).json({ message: 'Missing required fields or cart is empty.' });
     }
 
-    const paymentStatus = 'success';  // You can dynamically update this based on actual payment status if needed
+    // Generate transactionId based on current date and time
+    const now = new Date();
+    const transactionId = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+
+    const paymentStatus = 'success';  // Update dynamically if needed
 
     const payment = new Payment({
       userid,
-      transactionId,  // Store the actual Razorpay transaction ID
+      transactionId,  // Store the generated transaction ID
       amount,
       cart,
       address,
@@ -38,6 +42,7 @@ export const processPayment = async (req, res) => {
     return res.status(500).json({ message: 'Error processing payment. Please try again.' });
   }
 };
+
 
 
 // GET: Get Payment by User ID

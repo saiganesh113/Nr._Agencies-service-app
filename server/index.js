@@ -23,6 +23,7 @@ import doubleDoor from './routes/doubledoor.route.js';
 import sideDoor from './routes/sidedoor.route.js';
 import SuperAdmin from './routes/superAdmin.route.js';
 import Email from './routes/email.route.js'
+import invoiceRoutes from './routes/twilio.route.js'
 
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/doubledoor', doubleDoor);
 app.use('/api/sidedoor', sideDoor);
 app.use('/api/superadmin', SuperAdmin);
 app.use('/api/email', Email);
+app.use('/api', invoiceRoutes);
 
 // Notifications route (for example)
 app.get('/api/notifications', (req, res) => {
